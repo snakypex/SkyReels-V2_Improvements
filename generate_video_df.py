@@ -35,6 +35,7 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=-1)
     parser.add_argument(
         "--prompt",
+        nargs="+",
         type=str,
         default="A woman in a leather jacket and sunglasses riding a vintage motorcycle through a desert highway at sunset, her hair blowing wildly in the wind as the motorcycle kicks up dust, with the golden sun casting long shadows across the barren landscape.",
     )
@@ -143,6 +144,6 @@ if __name__ == "__main__":
 
     if local_rank == 0:
         current_time = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
-        video_out_file = f"{args.prompt[:100].replace('/','')}_{args.seed}_{current_time}.mp4"
+        video_out_file = f"{args.prompt[0][:100].replace('/','')}_{args.seed}_{current_time}.mp4"
         output_path = os.path.join(save_dir, video_out_file)
         imageio.mimwrite(output_path, video_frames, fps=fps, quality=8, output_params=["-loglevel", "error"])

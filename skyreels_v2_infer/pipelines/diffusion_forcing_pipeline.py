@@ -183,7 +183,7 @@ class DiffusionForcingPipeline:
     @torch.no_grad()
     def __call__(
         self,
-        prompt: Union[str, List[str]],
+        prompt,
         negative_prompt: Union[str, List[str]] = "",
         image: PipelineImageInput = None,
         height: int = 480,
@@ -213,7 +213,14 @@ class DiffusionForcingPipeline:
             prefix_video, predix_video_latent_length = self.encode_image(image, height, width, num_frames)
 
         self.text_encoder.to(self.device)
-        prompt_embeds = self.text_encoder.encode(prompt).to(self.transformer.dtype)
+        prompt_embeds_list = []
+        if type(prompt) is list:
+            for prompt_iter in prompt:
+                prompt_embeds_list.append(self.text_encoder.encode(prompt_iter).to(self.transformer.dtype))
+        else:
+            prompt_embeds_list.append(self.text_encoder.encode(prompt).to(self.transformer.dtype))
+        prompt_embeds = prompt_embeds_list[0]
+        
         if self.do_classifier_free_guidance:
             negative_prompt_embeds = self.text_encoder.encode(negative_prompt).to(self.transformer.dtype)
         if self.offload:
@@ -317,6 +324,9 @@ class DiffusionForcingPipeline:
             print(f"n_iter:{n_iter}")
             output_video = None
             for i in range(n_iter):
+                if type(prompt) is list:
+                    if len(prompt) > i:
+                        prompt_embeds = prompt_embeds_list[i]
                 if output_video is not None:  # i !=0
                     prefix_video = output_video[:, -overlap_history:].to(prompt_embeds.device)
                     prefix_video = [self.vae.encode(prefix_video.unsqueeze(0))[0]]  # [(c, f, h, w)]
