@@ -6,7 +6,7 @@ import time
 
 import imageio
 import torch
-from diffusers.utils import load_image
+from diffusers.utils import load_image, load_video
 
 from skyreels_v2_infer import DiffusionForcingPipeline
 from skyreels_v2_infer.modules import download_model
@@ -20,6 +20,7 @@ if __name__ == "__main__":
     parser.add_argument("--resolution", type=str, choices=["540P", "720P"])
     parser.add_argument("--num_frames", type=int, default=97)
     parser.add_argument("--image", type=str, default=None)
+    parser.add_argument("--video", type=str, default=None)
     parser.add_argument("--ar_step", type=int, default=0)
     parser.add_argument("--causal_attention", action="store_true")
     parser.add_argument("--causal_block_size", type=int, default=1)
@@ -74,6 +75,8 @@ if __name__ == "__main__":
     guidance_scale = args.guidance_scale
     shift = args.shift
     image = load_image(args.image).convert("RGB") if args.image else None
+    video = load_video(args.video) if args.video else None
+    video = video[-17:]
     negative_prompt = "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走"
 
     save_dir = os.path.join("result", args.outdir)
@@ -127,6 +130,7 @@ if __name__ == "__main__":
             prompt=prompt_input,
             negative_prompt=negative_prompt,
             image=image,
+            video=video,
             height=height,
             width=width,
             num_frames=num_frames,

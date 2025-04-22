@@ -95,6 +95,29 @@ class DiffusionForcingPipeline:
         predix_video_latent_length = prefix_video[0].shape[1]
         return prefix_video, predix_video_latent_length
 
+    def encode_video(
+        self, video: List[PipelineImageInput], height: int, width: int, num_frames: int
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+
+        # prefix_video
+        prefix_video = []
+        for image in video:
+            prefix_video.append(image.convert("RGB").resize((width, height)))
+        prefix_video = np.array(prefix_video).transpose(3, 0, 1, 2)
+        prefix_video = torch.tensor(prefix_video)  # .to(image_embeds.dtype).unsqueeze(1)
+        if prefix_video.dtype == torch.uint8:
+            prefix_video = (prefix_video.float() / (255.0 / 2.0)) - 1.0
+        prefix_video = prefix_video.to(self.device)
+        prefix_video = [self.vae.encode(prefix_video.unsqueeze(0))[0]]  # [(c, f, h, w)]
+        print(prefix_video[0].shape)
+        causal_block_size = self.transformer.num_frame_per_block
+        if prefix_video[0].shape[1] % causal_block_size != 0:
+            truncate_len = prefix_video[0].shape[1] % causal_block_size
+            print("the length of prefix video is truncated for the casual block size alignment.")
+            prefix_video[0] = prefix_video[0][:, : prefix_video[0].shape[1] - truncate_len]
+        predix_video_latent_length = prefix_video[0].shape[1]
+        return prefix_video, predix_video_latent_length
+
     def prepare_latents(
         self,
         shape: Tuple[int],
@@ -186,6 +209,7 @@ class DiffusionForcingPipeline:
         prompt,
         negative_prompt: Union[str, List[str]] = "",
         image: PipelineImageInput = None,
+        video: List[PipelineImageInput] = None,
         height: int = 480,
         width: int = 832,
         num_frames: int = 97,
@@ -211,6 +235,8 @@ class DiffusionForcingPipeline:
         predix_video_latent_length = 0
         if image:
             prefix_video, predix_video_latent_length = self.encode_image(image, height, width, num_frames)
+        elif video:
+            prefix_video, predix_video_latent_length = self.encode_video(video, height, width, num_frames)
 
         self.text_encoder.to(self.device)
         prompt_embeds_list = []
