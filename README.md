@@ -174,10 +174,11 @@ After downloading, set the model path in your generation commands:
 
 #### Single GPU Inference
 
-- **Diffusion Forcing**
+- **Diffusion Forcing for Long Video Generation**
 
-The <a href="https://arxiv.org/abs/2407.01392">**Diffusion Forcing**</a> version model allows us to generate Infinite-Length videos. This model supports both **text-to-video (T2V)** and **image-to-video (I2V)** tasks, and it can perform inference in both synchronous and asynchronous modes.
+The <a href="https://arxiv.org/abs/2407.01392">**Diffusion Forcing**</a> version model allows us to generate Infinite-Length videos. This model supports both **text-to-video (T2V)** and **image-to-video (I2V)** tasks, and it can perform inference in both synchronous and asynchronous modes. Here we demonstrate 2 running scripts as examples for long video generation. If you want to adjust the inference parameters, e.g., the duration of video, inference mode, read the Note below first.
 
+synchronous generation for 10s video
 ```shell
 model_id=Skywork/SkyReels-V2-DF-14B-540P
 # synchronous inference
@@ -192,10 +193,30 @@ python3 generate_video_df.py \
   --addnoise_condition 20 \
   --offload
 ```
+
+asynchronous generation for 30s video
+```shell
+model_id=Skywork/SkyReels-V2-DF-14B-540P
+# synchronous inference
+python3 generate_video_df.py \
+  --model_id ${model_id} \
+  --resolution 540P \
+  --ar_step 5 \
+  --causal_block_size 5 \
+  --base_num_frames 97 \
+  --num_frames 737 \
+  --overlap_history 17 \
+  --prompt "A graceful white swan with a curved neck and delicate feathers swimming in a serene lake at dawn, its reflection perfectly mirrored in the still water as mist rises from the surface, with the swan occasionally dipping its head into the water to feed." \
+  --addnoise_condition 20 \
+  --offload
+```
+
 > **Note**: 
-> - If you want to run the **image-to-video (I2V)** task, add `--image ${image_path}` to your command and it is also better to use **text-to-video (T2V)** prompt including the description of the first-frame image. 
-> - You can use `--ar_step 5` to enable asynchronous inference. When asynchronous inference, `--causal_block_size 5` is recommanded.
-> - To reduce peak VRAM, lower the `--base_num_frames` for the same generative length `--num_frames`. This may slightly reduce video quality.
+> - If you want to run the **image-to-video (I2V)** task, add `--image ${image_path}` to your command and it is also better to use **text-to-video (T2V)** prompt including the description of the first-frame image.
+> - For long video generation, you can just switch the `--num_frames`, e.g., `--num_frames 257` for 10s video, `--num_frames 377` for 15s video, `--num_frames 737` for 30s video, `--num_frames 1457` for 60s video. The number is not strictly algined with the logical frame number for specified time duration, but it is aligned with some training parameters, which means it may perform better.
+> - You can use `--ar_step 5` to enable asynchronous inference. When asynchronous inference, `--causal_block_size 5` is recommanded while it is not supposed to be set for synchronous generation, and remember that your base frame latent number (e.g., (97-1)//4+1=25 for base_num_frames=97) must be divided by causal_block_size. Asynchronous inference will take more steps to diffuse the whole sequence which means it will be slower than synchronous mode. 
+> - To reduce peak VRAM, just lower the `--base_num_frames`, e.g., to 77 or 57, while keeping the same generative length `--num_frames` you want to generate. This may slightly reduce video quality.
+> - `--addnoise_condition` is used to help smooth the long video generation by adding some noise to the clean condition. Too large noise can cause the inconsistency as well. 20 is a recommended value, and you may try larger ones, but it is recommended to not exceed 50.
 > - Generating a 540P video using the 1.3B model requires approximately 14.7GB peak VRAM, while the same resolution video using the 14B model demands around 51.2GB peak VRAM.
 
 - **Text To Video & Image To Video**
