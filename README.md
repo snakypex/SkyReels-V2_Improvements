@@ -1,6 +1,7 @@
 ## Changes from pftq:
 - Added seed synchronization code to allow random seed with multi-GPU.
 - Added batch_size parameter to allow multiple videos to generate without reloading the model.
+- Added preserve_image_aspect_ratio parameter to allow preserving original image aspect ratio.
 - Friendlier filenames with date, seed, cfg, steps, and other details in front.
 <hr>
 
