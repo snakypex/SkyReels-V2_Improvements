@@ -1,3 +1,7 @@
+## Changes from pftq:
+- Added seed synchronization code to allow random seed with multi-GPU.
+- Added batch_size parameter to allow multiple videos to generate without reloading the model.
+
 <p align="center">
   <img src="assets/logo2.png" alt="SkyReels Logo" width="50%">
 </p>
