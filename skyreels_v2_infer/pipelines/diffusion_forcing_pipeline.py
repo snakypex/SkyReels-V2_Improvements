@@ -100,10 +100,7 @@ class DiffusionForcingPipeline:
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
 
         # prefix_video
-        prefix_video = []
-        for image in video:
-            prefix_video.append(image.convert("RGB").resize((width, height)))
-        prefix_video = np.array(prefix_video).transpose(3, 0, 1, 2)
+        prefix_video = np.array(video).transpose(3, 0, 1, 2)
         prefix_video = torch.tensor(prefix_video)  # .to(image_embeds.dtype).unsqueeze(1)
         if prefix_video.dtype == torch.uint8:
             prefix_video = (prefix_video.float() / (255.0 / 2.0)) - 1.0

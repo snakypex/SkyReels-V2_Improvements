@@ -11,6 +11,7 @@ from diffusers.utils import load_image, load_video
 from skyreels_v2_infer import DiffusionForcingPipeline
 from skyreels_v2_infer.modules import download_model
 from skyreels_v2_infer.pipelines import PromptEnhancer
+from skyreels_v2_infer.pipelines import resizecrop
 
 if __name__ == "__main__":
 
@@ -74,9 +75,29 @@ if __name__ == "__main__":
 
     guidance_scale = args.guidance_scale
     shift = args.shift
-    image = load_image(args.image).convert("RGB") if args.image else None
-    video = load_video(args.video) if args.video else None
-    video = video[-17:]
+    if args.image:
+        args.image = load_image(args.image)
+        image_width, image_height = args.image.size
+        if image_height > image_width:
+            height, width = width, height
+        args.image = resizecrop(args.image, height, width)
+    image = args.image.convert("RGB") if args.image else None
+
+    video = []
+    if args.video:
+        args.video = load_video(args.video) 
+        arg_width = width
+        arg_height = height
+        for img in args.video:
+            image_width, image_height = img.size
+            if image_height > image_width:
+                height, width = arg_width, arg_height
+            img = resizecrop(img, height, width)
+            video.append(img.convert("RGB").resize((width, height)))
+            video = video[-17:]
+    else:
+        video = None
+    
     negative_prompt = "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走"
 
     save_dir = os.path.join("result", args.outdir)
