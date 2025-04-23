@@ -1,6 +1,5 @@
 ## Changes from pftq:
 - Added seed synchronization code to allow random seed with multi-GPU.
-- Added image broadcast/synchronization to avoid potential sync issues in multi-GPU.
 - Added batch_size parameter to allow multiple videos to generate without reloading the model, which takes about 20 min on multi-gpu so this saves a lot of time.
 - Added preserve_image_aspect_ratio parameter to allow preserving original image aspect ratio.
 - Fixed DF script not resize-cropping the image (I2V script does it but DF is missing the code).
