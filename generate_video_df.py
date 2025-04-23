@@ -146,6 +146,10 @@ if __name__ == "__main__":
     print(f"prompt:{prompt_input}")
     print(f"guidance_scale:{guidance_scale}")
 
+    output_path = ""
+    current_time = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
+    video_out_file = f"{args.prompt[0][:100].replace('/','')}_{args.seed}_{current_time}.mp4"
+
     with torch.cuda.amp.autocast(dtype=pipe.transformer.dtype), torch.no_grad():
         video_frames = pipe(
             prompt=prompt_input,
@@ -165,10 +169,11 @@ if __name__ == "__main__":
             ar_step=args.ar_step,
             causal_block_size=args.causal_block_size,
             fps=fps,
+            local_rank=local_rank,
+            save_dir=save_dir,
+            video_out_file=video_out_file,
         )[0]
 
     if local_rank == 0:
-        current_time = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
-        video_out_file = f"{args.prompt[0][:100].replace('/','')}_{args.seed}_{current_time}.mp4"
         output_path = os.path.join(save_dir, video_out_file)
         imageio.mimwrite(output_path, video_frames, fps=fps, quality=8, output_params=["-loglevel", "error"])
