@@ -41,6 +41,16 @@ if __name__ == "__main__":
         default="A woman in a leather jacket and sunglasses riding a vintage motorcycle through a desert highway at sunset, her hair blowing wildly in the wind as the motorcycle kicks up dust, with the golden sun casting long shadows across the barren landscape.",
     )
     parser.add_argument("--prompt_enhancer", action="store_true")
+    parser.add_argument("--teacache", action="store_true")
+    parser.add_argument(
+        "--teacache_thresh",
+        type=float,
+        default=0.2,
+        help="Higher speedup will cause to worse quality -- 0.1 for 2.0x speedup -- 0.2 for 3.0x speedup")
+    parser.add_argument(
+        "--use_ret_steps",
+        action="store_true",
+        help="Using Retention Steps will result in faster generation speed and better generation quality.")
     
     parser.add_argument("--batch_size", type=int, default=1) # 20250422 pftq: Batch functionality to avoid reloading the model each video
     parser.add_argument("--preserve_image_aspect_ratio", action="store_true")  # 20250422 pftq: Avoid resizing
@@ -53,6 +63,25 @@ if __name__ == "__main__":
 
     #20250422 pftq: unneeded with seed synchronization code
     #assert (args.use_usp and args.seed != -1) or (not args.use_usp), "usp mode requires a valid seed"
+
+    local_rank = 0
+    if args.use_usp:
+        assert not args.prompt_enhancer, "`--prompt_enhancer` is not allowed if using `--use_usp`. We recommend running the skyreels_v2_infer/pipelines/prompt_enhancer.py script first to generate enhanced prompt before enabling the `--use_usp` parameter."
+        from xfuser.core.distributed import initialize_model_parallel, init_distributed_environment
+        import torch.distributed as dist
+
+        dist.init_process_group("nccl")
+        local_rank = dist.get_rank()
+        torch.cuda.set_device(dist.get_rank())
+        device = "cuda"
+
+        init_distributed_environment(rank=dist.get_rank(), world_size=dist.get_world_size())
+
+        initialize_model_parallel(
+            sequence_parallel_degree=dist.get_world_size(),
+            ring_degree=1,
+            ulysses_degree=dist.get_world_size(),
+        )
 
     if args.resolution == "540P":
         height = 544
@@ -79,61 +108,74 @@ if __name__ == "__main__":
     shift = args.shift
     #image = load_image(args.image).convert("RGB") if args.image else None
 
-    #20250422 pftq: Add error handling for image loading, aspect ratio preservation
+    #20250422 pftq: Add error handling for image loading, aspect ratio preservation, and multi-GPU synchronization
     image = None
+    if args.use_usp:
+        dist.barrier()
     if args.image:
-        try:
-            image = load_image(args.image).convert("RGB")
+        if local_rank == 0:
+            try:
+                image = load_image(args.image).convert("RGB")
 
-            # 20250422 pftq: option to preserve image aspect ratio
-            if args.preserve_image_aspect_ratio:
-                img_width, img_height = image.size
-                if img_height > img_width:
-                    height, width = width, height
-                    width = int(height / img_height * img_width)
+                # 20250422 pftq: option to preserve image aspect ratio
+                if args.preserve_image_aspect_ratio:
+                    img_width, img_height = image.size
+                    if img_height > img_width:
+                        height, width = width, height
+                        width = int(height / img_height * img_width)
+                    else:
+                        height = int(width / img_width * img_height)
+
+                    divisibility=16
+                    if width%divisibility!=0:
+                            width = width - (width%divisibility)
+                    if height%divisibility!=0:
+                            height = height - (height%divisibility)
+
+                    image = resizecrop(image, height, width)
                 else:
-                    height = int(width / img_width * img_height)
+                    image_width, image_height = image.size
+                    if image_height > image_width:
+                        height, width = width, height
+                    image = resizecrop(image, height, width)
+            except Exception as e:
+                raise ValueError(f"Failed to load or process image: {e}")
+                
+        if args.use_usp:
+            dist.barrier()
+            try:
+                #20250422 pftq: Broadcast height and width to ensure consistency
+                height_tensor = torch.tensor(height, dtype=torch.int64, device="cuda")
+                width_tensor = torch.tensor(width, dtype=torch.int64, device="cuda")
+                dist.broadcast(height_tensor, src=0)
+                dist.broadcast(width_tensor, src=0)
+                height = height_tensor.item()
+                width = width_tensor.item()
+                
+                # Broadcast image to other ranks
+                image_data = torch.tensor(np.array(image), dtype=torch.uint8, device="cuda") if image is not None else None
+                if local_rank == 0:
+                    print(f"Broadcasting image from rank {local_rank}...")
+                    dist.broadcast(image_data, src=0)
+                else:
+                    print(f"Receiving image from rank {local_rank}...")
+                    image_data = torch.empty((height, width, 3), dtype=torch.uint8, device="cuda")
+                    dist.broadcast(image_data, src=0)
+                    image = Image.fromarray(image_data.cpu().numpy())
+                dist.barrier()
 
-                divisibility=16
-                if width%divisibility!=0:
-                        width = width - (width%divisibility)
-                if height%divisibility!=0:
-                        height = height - (height%divisibility)
+            except Exception as e:
+                print(f"[Rank {local_rank}] Image broadcasting error: {e}")
+                if args.use_usp:
+                    dist.destroy_process_group()
+                raise
 
-                image = resizecrop(image, height, width)
-            else:
-                image_width, image_height = image.size
-                if image_height > image_width:
-                    height, width = width, height
-                image = resizecrop(image, height, width)
-        except Exception as e:
-            raise ValueError(f"Failed to load or process image: {e}")
-
-    print(f"{width}x{height} | Image: "+str(image!=None))
+    print(f"Rank {local_rank}: {width}x{height} | Image: "+str(image!=None))
     
     negative_prompt = args.negative_prompt # 20250422 pftq: allow editable negative prompt
 
     save_dir = os.path.join("result", args.outdir)
     os.makedirs(save_dir, exist_ok=True)
-
-    local_rank = 0
-    if args.use_usp:
-        assert not args.prompt_enhancer, "`--prompt_enhancer` is not allowed if using `--use_usp`. We recommend running the skyreels_v2_infer/pipelines/prompt_enhancer.py script first to generate enhanced prompt before enabling the `--use_usp` parameter."
-        from xfuser.core.distributed import initialize_model_parallel, init_distributed_environment
-        import torch.distributed as dist
-
-        dist.init_process_group("nccl")
-        local_rank = dist.get_rank()
-        torch.cuda.set_device(dist.get_rank())
-        device = "cuda"
-
-        init_distributed_environment(rank=dist.get_rank(), world_size=dist.get_world_size())
-
-        initialize_model_parallel(
-            sequence_parallel_degree=dist.get_world_size(),
-            ring_degree=1,
-            ulysses_degree=dist.get_world_size(),
-        )
 
     prompt_input = args.prompt
     if args.prompt_enhancer and args.image is None:
@@ -160,15 +202,23 @@ if __name__ == "__main__":
     if args.causal_attention:
         pipe.transformer.set_ar_attention(args.causal_block_size)
 
+    if args.teacache:
+        if args.ar_step > 0:
+            num_steps = args.inference_steps + (((args.base_num_frames - 1)//4 + 1) // args.causal_block_size - 1) * args.ar_step
+            print('num_steps:', num_steps)
+        else:
+            num_steps = args.inference_steps
+        pipe.transformer.initialize_teacache(enable_teacache=True, num_steps=num_steps, 
+                                             teacache_thresh=args.teacache_thresh, use_ret_steps=args.use_ret_steps, 
+                                             ckpt_dir=args.model_id)
 
     #20250422 pftq: Set preferred linear algebra backend to avoid cuSOLVER issues
     torch.backends.cuda.preferred_linalg_library("default")  # or try "magma" if available
-
-    print(f"Rank {local_rank} prompt:{prompt_input}")
-    print(f"Rank {local_rank} guidance_scale:{guidance_scale}")
     
     for idx in range(args.batch_size): # 20250422 pftq: implemented --batch_size
         if local_rank == 0:
+            print(f"prompt:{prompt_input}")
+            print(f"guidance_scale:{guidance_scale}")
             print(f"Generating video {idx+1} of {args.batch_size}")
 
         #20250422 pftq: Synchronize seed across all ranks
