@@ -6,6 +6,8 @@
 - Exposed negative_prompt to allow that to be changed/overwritten.
 - Friendlier filenames with date, seed, cfg, steps, and other details in front.
 
+Note: The TeaCache update breaks the code (see https://github.com/SkyworkAI/SkyReels-V2/issues/36) so that is currently excluded from this fork.
+
 Easy install instructions for those using Runpod like me:
 ```
 #create once on new pod
