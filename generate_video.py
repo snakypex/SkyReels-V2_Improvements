@@ -233,7 +233,7 @@ if __name__ == "__main__":
             gpucount = ""
             if args.use_usp and dist.get_world_size():
                 gpucount = "_"+str(dist.get_world_size())+"xGPU"
-            video_out_file = f"{current_time}_skyreels2_cfg{args.guidance_scale}_steps{args.inference_steps}_seed{args.seed}{gpucount}_{args.prompt[:100].replace('/','')}_{idx}.mp4" 
+            video_out_file = f"{current_time}_skyreels2_{args.resolution}-{args.num_frames}f_cfg{args.guidance_scale}_steps{args.inference_steps}_seed{args.seed}{gpucount}_{args.prompt[:100].replace('/','')}_{idx}.mp4" 
             
             output_path = os.path.join(save_dir, video_out_file)
             imageio.mimwrite(output_path, video_frames, fps=args.fps, quality=8, output_params=["-loglevel", "error"])
