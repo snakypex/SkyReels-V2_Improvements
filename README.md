@@ -25,6 +25,26 @@ torchrun --nproc_per_node=2 generate_video_df.py \
   --use_usp \
   --offload
 ```
+
+Single GPU:
+```
+model_id=Skywork/SkyReels-V2-DF-14B-540P
+python3 generate_video_df.py \
+  --model_id ${model_id} \
+  --resolution 540P \
+  --ar_step 0 \
+  --base_num_frames 97 \
+  --num_frames 257 \
+  --overlap_history 17 \
+  --inference_steps 50 \
+  --guidance_scale 6 \
+  --batch_size 10 \
+  --preserve_image_aspect_ratio \
+  --image "image.jpg" \
+  --prompt "" \
+  --addnoise_condition 20 \
+  --offload
+```
 <hr>
 
 <p align="center">
