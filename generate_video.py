@@ -14,6 +14,7 @@ import numpy as np  #20250422 pftq: Added for seed synchronization
 from skyreels_v2_infer.modules import download_model
 from skyreels_v2_infer.pipelines import Image2VideoPipeline
 from skyreels_v2_infer.pipelines import PromptEnhancer
+from skyreels_v2_infer.pipelines import resizecrop
 from skyreels_v2_infer.pipelines import Text2VideoPipeline
 
 MODEL_ID_CONFIG = {
@@ -104,6 +105,11 @@ if __name__ == "__main__":
                 if args.preserve_image_aspect_ratio:
                     img_width, img_height = image.size
                     height = int(width / img_width * img_height)
+                else:
+                    image_width, image_height = image.size
+                    if image_height > image_width:
+                        height, width = width, height
+                    image = resizecrop(image, height, width)
             except Exception as e:
                 raise ValueError(f"Failed to load or process image: {e}")
                 
