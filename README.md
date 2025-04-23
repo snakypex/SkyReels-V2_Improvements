@@ -33,7 +33,8 @@ cd /workspace/SkyReels-V2
 Example prompt (multi-GPU):
 ```
 model_id=Skywork/SkyReels-V2-DF-14B-540P
-torchrun --nproc_per_node=2 generate_video_df.py \
+gpu_count=2
+torchrun --nproc_per_node=${gpu_count} generate_video_df.py \
   --model_id ${model_id} \
   --resolution 540P \
   --ar_step 0 \
