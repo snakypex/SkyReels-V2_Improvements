@@ -94,17 +94,31 @@ if __name__ == "__main__":
 
     #image = load_image(args.image).convert("RGB") if args.image else None
 
+        
     #20250422 pftq: Add error handling for image loading, aspect ratio preservation, and multi-GPU synchronization
     image = None
-    if args.image:
+    if args.image:  
         if local_rank == 0:
             try:
+                print("Loading image...")
                 image = load_image(args.image).convert("RGB")
 
                 # 20250422 pftq: option to preserve image aspect ratio
                 if args.preserve_image_aspect_ratio:
                     img_width, img_height = image.size
-                    height = int(width / img_width * img_height)
+                    if img_height > img_width:
+                        height, width = width, height
+                        width = int(height / img_height * img_width)
+                    else:
+                        height = int(width / img_width * img_height)
+
+                    divisibility=8
+                    if width%divisibility!=0:
+                            width = width - (width%divisibility)
+                    if height%divisibility!=0:
+                            height = height - (height%divisibility)
+
+                    image = resizecrop(image, height, width)
                 else:
                     image_width, image_height = image.size
                     if image_height > image_width:
@@ -114,15 +128,6 @@ if __name__ == "__main__":
                 raise ValueError(f"Failed to load or process image: {e}")
                 
         if args.use_usp:
-            # Broadcast image to other ranks
-            image_data = torch.tensor(np.array(image), dtype=torch.uint8, device="cuda") if image is not None else None
-            if local_rank == 0:
-                dist.broadcast(image_data, src=0)
-            else:
-                image_data = torch.empty((height, width, 3), dtype=torch.uint8, device="cuda")
-                dist.broadcast(image_data, src=0)
-                image = Image.fromarray(image_data.cpu().numpy())
-
             #20250422 pftq: Broadcast height and width to ensure consistency
             height_tensor = torch.tensor(height, dtype=torch.int64, device="cuda")
             width_tensor = torch.tensor(width, dtype=torch.int64, device="cuda")
@@ -130,6 +135,19 @@ if __name__ == "__main__":
             dist.broadcast(width_tensor, src=0)
             height = height_tensor.item()
             width = width_tensor.item()
+            
+            # Broadcast image to other ranks
+            image_data = torch.tensor(np.array(image), dtype=torch.uint8, device="cuda") if image is not None else None
+            if local_rank == 0:
+                print(f"Broadcasting image from rank {local_rank}...")
+                dist.broadcast(image_data, src=0)
+            else:
+                print(f"Receiving image from rank {local_rank}...")
+                image_data = torch.empty((height, width, 3), dtype=torch.uint8, device="cuda")
+                dist.broadcast(image_data, src=0)
+                image = Image.fromarray(image_data.cpu().numpy())
+
+    print(f"Rank {local_rank}: {width}x{height}")
 
     negative_prompt = args.negative_prompt # 20250422 pftq: allow editable negative prompt
 
@@ -195,7 +213,6 @@ if __name__ == "__main__":
             if args.seed == -1 or idx > 0:
                 args.seed = int(random.randrange(4294967294))
 
-        #20250422 pftq: Set seeds for reproducibility
         random.seed(args.seed)
         np.random.seed(args.seed)
         torch.manual_seed(args.seed)
