@@ -100,6 +100,8 @@ if __name__ == "__main__":
 
     #20250422 pftq: Add error handling for image loading, aspect ratio preservation, and multi-GPU synchronization
     image = None
+    if args.use_usp:
+        dist.barrier()
     if args.image:
         if local_rank == 0:
             try:
@@ -130,6 +132,7 @@ if __name__ == "__main__":
                 raise ValueError(f"Failed to load or process image: {e}")
                 
         if args.use_usp:
+            dist.barrier()
             #20250422 pftq: Broadcast height and width to ensure consistency
             height_tensor = torch.tensor(height, dtype=torch.int64, device="cuda")
             width_tensor = torch.tensor(width, dtype=torch.int64, device="cuda")
@@ -146,6 +149,7 @@ if __name__ == "__main__":
                 image_data = torch.empty((height, width, 3), dtype=torch.uint8, device="cuda")
                 dist.broadcast(image_data, src=0)
                 image = Image.fromarray(image_data.cpu().numpy())
+            dist.barrier()
 
     print(f"Rank {local_rank}: {width}x{height}")
     
