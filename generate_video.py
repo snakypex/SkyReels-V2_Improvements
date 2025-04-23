@@ -170,7 +170,7 @@ if __name__ == "__main__":
 
                 #20250422 pftq: Always broadcast seed to ensure consistency
                 if local_rank == 0:
-                    if args.seed == -1 or idx > 0:
+                    if args.seed == -1 or args.seed is None or idx > 0:
                         args.seed = int(random.randrange(4294967294))
                 seed_tensor = torch.tensor(args.seed, dtype=torch.int64, device="cuda")
                 dist.broadcast(seed_tensor, src=0)
