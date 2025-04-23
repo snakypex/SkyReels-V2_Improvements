@@ -354,7 +354,7 @@ class DiffusionForcingPipeline:
                 if type(prompt) is list:
                     if len(prompt) > i_n_iter:
                         prompt_embeds = prompt_embeds_list[i_n_iter]
-                if output_video is not None:  # i !=0
+                if output_video is not None:  # i_n_iter !=0
                     prefix_video = output_video[:, -overlap_history:].to(prompt_embeds.device)
                     prefix_video = [self.vae.encode(prefix_video.unsqueeze(0))[0]]  # [(c, f, h, w)]
                     if prefix_video[0].shape[1] % causal_block_size != 0:
@@ -362,10 +362,10 @@ class DiffusionForcingPipeline:
                         print("the length of prefix video is truncated for the casual block size alignment.")
                         prefix_video[0] = prefix_video[0][:, : prefix_video[0].shape[1] - truncate_len]
                     predix_video_latent_length = prefix_video[0].shape[1]
-                    finished_frame_num = i * (base_num_frames - overlap_history_frames) + overlap_history_frames
+                    finished_frame_num = i_n_iter * (base_num_frames - overlap_history_frames) + overlap_history_frames
                     left_frame_num = latent_length - finished_frame_num
                     base_num_frames_iter = min(left_frame_num + overlap_history_frames, base_num_frames)
-                else:  # i == 0
+                else:  # i_n_iter == 0
                     base_num_frames_iter = base_num_frames
                 latent_shape = [16, base_num_frames_iter, latent_height, latent_width]
                 latents = self.prepare_latents(
