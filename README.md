@@ -20,8 +20,6 @@ pip install torch==2.5.1
 pip install --upgrade wheel setuptools
 pip install packaging
 pip install -r requirements.txt --no-build-isolation
-pip install "huggingface_hub[cli]"
-huggingface-cli download Skywork/SkyReels-V2-DF-14B-540P --local-dir ./SkyReels-V2-DF-14B-540P
 deactivate
 
 #always run at the start to use persisting drive
