@@ -154,6 +154,10 @@ if __name__ == "__main__":
         prompt_input = prompt_enhancer(prompt_input)
         print(f"enhanced prompt: {prompt_input}")
 
+
+    #20250422 pftq: Set preferred linear algebra backend to avoid cuSOLVER issues
+    torch.backends.cuda.preferred_linalg_library("default")  # or try "magma" if available
+    
     for idx in range(args.batch_size): # 20250422 pftq: implemented --batch_size
         if local_rank == 0:
             print(f"Generating video {idx+1} of {args.batch_size}")
