@@ -54,25 +54,6 @@ if __name__ == "__main__":
     #20250422 pftq: unneeded with seed synchronization code
     #assert (args.use_usp and args.seed != -1) or (not args.use_usp), "usp mode requires a valid seed"
 
-    local_rank = 0
-    if args.use_usp:
-        assert not args.prompt_enhancer, "`--prompt_enhancer` is not allowed if using `--use_usp`. We recommend running the skyreels_v2_infer/pipelines/prompt_enhancer.py script first to generate enhanced prompt before enabling the `--use_usp` parameter."
-        from xfuser.core.distributed import initialize_model_parallel, init_distributed_environment
-        import torch.distributed as dist
-
-        dist.init_process_group("nccl")
-        local_rank = dist.get_rank()
-        torch.cuda.set_device(dist.get_rank())
-        device = "cuda"
-
-        init_distributed_environment(rank=dist.get_rank(), world_size=dist.get_world_size())
-
-        initialize_model_parallel(
-            sequence_parallel_degree=dist.get_world_size(),
-            ring_degree=1,
-            ulysses_degree=dist.get_world_size(),
-        )
-
     if args.resolution == "540P":
         height = 544
         width = 960
@@ -98,65 +79,61 @@ if __name__ == "__main__":
     shift = args.shift
     #image = load_image(args.image).convert("RGB") if args.image else None
 
-    #20250422 pftq: Add error handling for image loading, aspect ratio preservation, and multi-GPU synchronization
+    #20250422 pftq: Add error handling for image loading, aspect ratio preservation
     image = None
-    if args.use_usp:
-        dist.barrier()
     if args.image:
-        if local_rank == 0:
-            try:
-                image = load_image(args.image).convert("RGB")
+        try:
+            image = load_image(args.image).convert("RGB")
 
-                # 20250422 pftq: option to preserve image aspect ratio
-                if args.preserve_image_aspect_ratio:
-                    img_width, img_height = image.size
-                    if img_height > img_width:
-                        height, width = width, height
-                        width = int(height / img_height * img_width)
-                    else:
-                        height = int(width / img_width * img_height)
-
-                    divisibility=16
-                    if width%divisibility!=0:
-                            width = width - (width%divisibility)
-                    if height%divisibility!=0:
-                            height = height - (height%divisibility)
-
-                    image = resizecrop(image, height, width)
+            # 20250422 pftq: option to preserve image aspect ratio
+            if args.preserve_image_aspect_ratio:
+                img_width, img_height = image.size
+                if img_height > img_width:
+                    height, width = width, height
+                    width = int(height / img_height * img_width)
                 else:
-                    image_width, image_height = image.size
-                    if image_height > image_width:
-                        height, width = width, height
-                    image = resizecrop(image, height, width)
-            except Exception as e:
-                raise ValueError(f"Failed to load or process image: {e}")
-                
-        if args.use_usp:
-            dist.barrier()
-            #20250422 pftq: Broadcast height and width to ensure consistency
-            height_tensor = torch.tensor(height, dtype=torch.int64, device="cuda")
-            width_tensor = torch.tensor(width, dtype=torch.int64, device="cuda")
-            dist.broadcast(height_tensor, src=0)
-            dist.broadcast(width_tensor, src=0)
-            height = height_tensor.item()
-            width = width_tensor.item()
-            
-            # Broadcast image to other ranks
-            image_data = torch.tensor(np.array(image), dtype=torch.uint8, device="cuda") if image is not None else None
-            if local_rank == 0:
-                dist.broadcast(image_data, src=0)
-            else:
-                image_data = torch.empty((height, width, 3), dtype=torch.uint8, device="cuda")
-                dist.broadcast(image_data, src=0)
-                image = Image.fromarray(image_data.cpu().numpy())
-            dist.barrier()
+                    height = int(width / img_width * img_height)
 
-    print(f"Rank {local_rank}: {width}x{height}")
+                divisibility=16
+                if width%divisibility!=0:
+                        width = width - (width%divisibility)
+                if height%divisibility!=0:
+                        height = height - (height%divisibility)
+
+                image = resizecrop(image, height, width)
+            else:
+                image_width, image_height = image.size
+                if image_height > image_width:
+                    height, width = width, height
+                image = resizecrop(image, height, width)
+        except Exception as e:
+            raise ValueError(f"Failed to load or process image: {e}")
+
+    print(f"{width}x{height} | Image: "+str(image!=None))
     
     negative_prompt = args.negative_prompt # 20250422 pftq: allow editable negative prompt
 
     save_dir = os.path.join("result", args.outdir)
     os.makedirs(save_dir, exist_ok=True)
+
+    local_rank = 0
+    if args.use_usp:
+        assert not args.prompt_enhancer, "`--prompt_enhancer` is not allowed if using `--use_usp`. We recommend running the skyreels_v2_infer/pipelines/prompt_enhancer.py script first to generate enhanced prompt before enabling the `--use_usp` parameter."
+        from xfuser.core.distributed import initialize_model_parallel, init_distributed_environment
+        import torch.distributed as dist
+
+        dist.init_process_group("nccl")
+        local_rank = dist.get_rank()
+        torch.cuda.set_device(dist.get_rank())
+        device = "cuda"
+
+        init_distributed_environment(rank=dist.get_rank(), world_size=dist.get_world_size())
+
+        initialize_model_parallel(
+            sequence_parallel_degree=dist.get_world_size(),
+            ring_degree=1,
+            ulysses_degree=dist.get_world_size(),
+        )
 
     prompt_input = args.prompt
     if args.prompt_enhancer and args.image is None:
@@ -186,11 +163,12 @@ if __name__ == "__main__":
 
     #20250422 pftq: Set preferred linear algebra backend to avoid cuSOLVER issues
     torch.backends.cuda.preferred_linalg_library("default")  # or try "magma" if available
+
+    print(f"Rank {local_rank} prompt:{prompt_input}")
+    print(f"Rank {local_rank} guidance_scale:{guidance_scale}")
     
     for idx in range(args.batch_size): # 20250422 pftq: implemented --batch_size
         if local_rank == 0:
-            print(f"prompt:{prompt_input}")
-            print(f"guidance_scale:{guidance_scale}")
             print(f"Generating video {idx+1} of {args.batch_size}")
 
         #20250422 pftq: Synchronize seed across all ranks
