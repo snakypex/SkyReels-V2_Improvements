@@ -155,6 +155,10 @@ if __name__ == "__main__":
     if args.causal_attention:
         pipe.transformer.set_ar_attention(args.causal_block_size)
 
+
+    #20250422 pftq: Set preferred linear algebra backend to avoid cuSOLVER issues
+    torch.backends.cuda.preferred_linalg_library("default")  # or try "magma" if available
+    
     for idx in range(args.batch_size): # 20250422 pftq: implemented --batch_size
         if local_rank == 0:
             print(f"prompt:{prompt_input}")
