@@ -114,7 +114,7 @@ if __name__ == "__main__":
                     else:
                         height = int(width / img_width * img_height)
 
-                    divisibility=8
+                    divisibility=16
                     if width%divisibility!=0:
                             width = width - (width%divisibility)
                     if height%divisibility!=0:
