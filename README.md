@@ -3,7 +3,33 @@
 - Added image broadcast/synchronization to avoid potential sync issues in multi-GPU.
 - Added batch_size parameter to allow multiple videos to generate without reloading the model, which takes about 20 min on multi-gpu so this saves a lot of time.
 - Added preserve_image_aspect_ratio parameter to allow preserving original image aspect ratio.
+- Exposed negative_prompt to allow that to be changed/overwritten.
 - Friendlier filenames with date, seed, cfg, steps, and other details in front.
+
+Easy install instructions for those using Runpod like me:
+```
+#create once on new pod
+export HF_HOME=/workspace/
+export TZ=America/Los_Angeles
+python -m venv venv
+git clone https://github.com/pftq/SkyReels-V2_Improvements
+mv SkyReels-V2_Improvements SkyReels-V2
+cd /workspace/SkyReels-V2
+source /workspace/venv/bin/activate
+pip install torch==2.5.1
+pip install --upgrade wheel setuptools
+pip install packaging
+pip install -r requirements.txt --no-build-isolation
+pip install "huggingface_hub[cli]"
+huggingface-cli download Skywork/SkyReels-V2-DF-14B-540P --local-dir ./SkyReels-V2-DF-14B-540P
+deactivate
+
+#always run at the start to use persisting drive
+export HF_HOME=/workspace/
+export TZ=America/Los_Angeles
+source /workspace/venv/bin/activate
+cd /workspace/SkyReels-V2
+```
 
 Example prompt (multi-GPU):
 ```
@@ -21,6 +47,7 @@ torchrun --nproc_per_node=2 generate_video_df.py \
   --preserve_image_aspect_ratio \
   --image "image.jpg" \
   --prompt "" \
+  --negative_prompt "Bright tones, overexposed, static, blurred details, subtitles, style, works, paintings, images, static, overall gray, worst quality, low quality, JPEG compression residue, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn faces, deformed, disfigured, misshapen limbs, fused fingers, still picture, messy background, three legs, many people in the background, walking backwards" \
   --addnoise_condition 20 \
   --use_usp \
   --offload
@@ -42,9 +69,13 @@ python3 generate_video_df.py \
   --preserve_image_aspect_ratio \
   --image "image.jpg" \
   --prompt "" \
+  --negative_prompt "Bright tones, overexposed, static, blurred details, subtitles, style, works, paintings, images, static, overall gray, worst quality, low quality, JPEG compression residue, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn faces, deformed, disfigured, misshapen limbs, fused fingers, still picture, messy background, three legs, many people in the background, walking backwards" \
   --addnoise_condition 20 \
   --offload
 ```
+
+Change "DF" to "I2V' or "T2V" accordingly if you don't want to use the infinite length version of the model.
+
 <hr>
 
 <p align="center">
