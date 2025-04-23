@@ -34,7 +34,7 @@ if __name__ == "__main__":
     parser.add_argument("--use_usp", action="store_true")
     parser.add_argument("--offload", action="store_true")
     parser.add_argument("--fps", type=int, default=24)
-    parser.add_argument("--seed", type=int, default=-1)
+    parser.add_argument("--seed", type=int, default=None)
     parser.add_argument(
         "--prompt",
         nargs="+",
@@ -48,7 +48,7 @@ if __name__ == "__main__":
     print("model_id:", args.model_id)
 
     assert (args.use_usp and args.seed is not None) or (not args.use_usp), "usp mode need seed"
-    if args.seed == -1:
+    if args.seed is None:
         random.seed(time.time())
         args.seed = int(random.randrange(4294967294))
 
