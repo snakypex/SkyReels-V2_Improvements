@@ -230,7 +230,10 @@ if __name__ == "__main__":
             #video_out_file = f"{args.prompt[:100].replace('/','')}_{args.seed}_{current_time}.mp4"
             
             # 20250422 pftq: more useful filename
-            video_out_file = f"{current_time}_cfg{args.guidance_scale}_steps{args.inference_steps}_seed{args.seed}_{args.prompt[:100].replace('/','')}_{idx}.mp4" 
+            gpucount = ""
+            if args.use_usp and dist.get_world_size():
+                gpucount = "_"+dist.get_world_size()+"xGPU"
+            video_out_file = f"{current_time}_skyreels2_cfg{args.guidance_scale}_steps{args.inference_steps}_seed{args.seed}{gpucount}_{args.prompt[:100].replace('/','')}_{idx}.mp4" 
             
             output_path = os.path.join(save_dir, video_out_file)
             imageio.mimwrite(output_path, video_frames, fps=args.fps, quality=8, output_params=["-loglevel", "error"])
