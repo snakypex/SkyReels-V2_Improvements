@@ -64,6 +64,55 @@ if __name__ == "__main__":
     #20250422 pftq: unneeded with seed synchronization code
     #assert (args.use_usp and args.seed is not None) or (not args.use_usp), "usp mode need seed"
 
+    if args.resolution == "540P":
+        height = 544
+        width = 960
+    elif args.resolution == "720P":
+        height = 720
+        width = 1280
+    else:
+        raise ValueError(f"Invalid resolution: {args.resolution}")
+
+    #image = load_image(args.image).convert("RGB") if args.image else None
+
+        
+    #20250422 pftq: Add error handling for image loading, aspect ratio preservation
+    image = None
+    if args.use_usp:
+        dist.barrier()
+    if args.image:  
+        try:
+            print("Loading image...")
+            image = load_image(args.image).convert("RGB")
+
+            # 20250422 pftq: option to preserve image aspect ratio
+            if args.preserve_image_aspect_ratio:
+                img_width, img_height = image.size
+                if img_height > img_width:
+                    height, width = width, height
+                    width = int(height / img_height * img_width)
+                else:
+                    height = int(width / img_width * img_height)
+
+                divisibility=16
+                if width%divisibility!=0:
+                        width = width - (width%divisibility)
+                if height%divisibility!=0:
+                        height = height - (height%divisibility)
+
+                image = resizecrop(image, height, width)
+            else:
+                image_width, image_height = image.size
+                if image_height > image_width:
+                    height, width = width, height
+                image = resizecrop(image, height, width)
+        except Exception as e:
+            raise ValueError(f"Failed to load or process image: {e}")
+
+    print(f"{width}x{height} | Image: "+str(image!=None))
+
+    negative_prompt = args.negative_prompt # 20250422 pftq: allow editable negative prompt
+
     local_rank = 0
     if args.use_usp:
         assert not args.prompt_enhancer, "`--prompt_enhancer` is not allowed if using `--use_usp`. We recommend running the skyreels_v2_infer/pipelines/prompt_enhancer.py script first to generate enhanced prompt before enabling the `--use_usp` parameter."
@@ -82,78 +131,6 @@ if __name__ == "__main__":
             ring_degree=1,
             ulysses_degree=dist.get_world_size(),
         )
-
-    if args.resolution == "540P":
-        height = 544
-        width = 960
-    elif args.resolution == "720P":
-        height = 720
-        width = 1280
-    else:
-        raise ValueError(f"Invalid resolution: {args.resolution}")
-
-    #image = load_image(args.image).convert("RGB") if args.image else None
-
-        
-    #20250422 pftq: Add error handling for image loading, aspect ratio preservation, and multi-GPU synchronization
-    image = None
-    if args.use_usp:
-        dist.barrier()
-    if args.image:  
-        if local_rank == 0:
-            try:
-                print("Loading image...")
-                image = load_image(args.image).convert("RGB")
-
-                # 20250422 pftq: option to preserve image aspect ratio
-                if args.preserve_image_aspect_ratio:
-                    img_width, img_height = image.size
-                    if img_height > img_width:
-                        height, width = width, height
-                        width = int(height / img_height * img_width)
-                    else:
-                        height = int(width / img_width * img_height)
-
-                    divisibility=16
-                    if width%divisibility!=0:
-                            width = width - (width%divisibility)
-                    if height%divisibility!=0:
-                            height = height - (height%divisibility)
-
-                    image = resizecrop(image, height, width)
-                else:
-                    image_width, image_height = image.size
-                    if image_height > image_width:
-                        height, width = width, height
-                    image = resizecrop(image, height, width)
-            except Exception as e:
-                raise ValueError(f"Failed to load or process image: {e}")
-                
-        if args.use_usp:
-            dist.barrier()
-            #20250422 pftq: Broadcast height and width to ensure consistency
-            height_tensor = torch.tensor(height, dtype=torch.int64, device="cuda")
-            width_tensor = torch.tensor(width, dtype=torch.int64, device="cuda")
-            dist.broadcast(height_tensor, src=0)
-            dist.broadcast(width_tensor, src=0)
-            height = height_tensor.item()
-            width = width_tensor.item()
-            
-            # Broadcast image to other ranks
-            image_data = torch.tensor(np.array(image), dtype=torch.uint8, device="cuda") if image is not None else None
-            if local_rank == 0:
-                print(f"Broadcasting image from rank {local_rank}...")
-                dist.broadcast(image_data, src=0)
-            else:
-                print(f"Receiving image from rank {local_rank}...")
-                image_data = torch.empty((height, width, 3), dtype=torch.uint8, device="cuda")
-                dist.broadcast(image_data, src=0)
-                image = Image.fromarray(image_data.cpu().numpy())
-            dist.barrier()
-
-    print(f"Rank {local_rank}: {width}x{height}")
-
-    negative_prompt = args.negative_prompt # 20250422 pftq: allow editable negative prompt
 
     prompt_input = args.prompt
     if args.prompt_enhancer and args.image is None:
