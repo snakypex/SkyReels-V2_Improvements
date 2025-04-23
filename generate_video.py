@@ -51,16 +51,6 @@ if __name__ == "__main__":
         default="A serene lake surrounded by towering mountains, with a few swans gracefully gliding across the water and sunlight dancing on the surface.",
     )
     parser.add_argument("--prompt_enhancer", action="store_true")
-    parser.add_argument("--teacache", action="store_true")
-    parser.add_argument(
-        "--teacache_thresh",
-        type=float,
-        default=0.2,
-        help="Higher speedup will cause to worse quality -- 0.1 for 2.0x speedup -- 0.2 for 3.0x speedup")
-    parser.add_argument(
-        "--use_ret_steps",
-        action="store_true",
-        help="Using Retention Steps will result in faster generation speed and better generation quality.")
 
     parser.add_argument("--batch_size", type=int, default=1) # 20250422 pftq: Batch functionality to avoid reloading the model each video
     parser.add_argument("--preserve_image_aspect_ratio", action="store_true")  # 20250422 pftq: Avoid resizing
@@ -160,11 +150,6 @@ if __name__ == "__main__":
     print(f"Rank {local_rank}: {width}x{height}")
 
     negative_prompt = args.negative_prompt # 20250422 pftq: allow editable negative prompt
-
-    if args.teacache:
-        pipe.transformer.initialize_teacache(enable_teacache=True, num_steps=args.inference_steps, 
-                                             teacache_thresh=args.teacache_thresh, use_ret_steps=args.use_ret_steps, 
-                                             ckpt_dir=args.model_id)
             
     prompt_input = args.prompt
     if args.prompt_enhancer and args.image is None:
