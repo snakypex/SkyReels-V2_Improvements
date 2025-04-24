@@ -50,10 +50,15 @@ def get_transformer(model_path, device="cuda", weight_dtype=torch.bfloat16, skip
     return transformer
 
 
-def get_text_encoder(model_path, device="cuda", weight_dtype=torch.bfloat16) -> T5EncoderModel:
+def get_text_encoder(model_path, device="cuda", weight_dtype=torch.bfloat16, skip_weights=False) -> T5EncoderModel:
+    # 20250423 pftq: Added skip_weights and weights_only=True
     t5_model = os.path.join(model_path, "models_t5_umt5-xxl-enc-bf16.pth")
     tokenizer_path = os.path.join(model_path, "google", "umt5-xxl")
-    text_encoder = T5EncoderModel(checkpoint_path=t5_model, tokenizer_path=tokenizer_path).to(device).to(weight_dtype)
+    text_encoder = T5EncoderModel(
+        checkpoint_path=t5_model if not skip_weights else None,
+        tokenizer_path=tokenizer_path,
+        weights_only=True
+    ).to(device).to(weight_dtype)
     text_encoder.requires_grad_(False)
     text_encoder.eval()
     gc.collect()
