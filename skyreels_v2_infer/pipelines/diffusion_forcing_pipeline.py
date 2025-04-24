@@ -73,39 +73,35 @@ class DiffusionForcingPipeline:
         if not use_usp or local_rank == 0:
             print(f"[Rank {local_rank}] Loading transformer...")
             self.transformer = get_transformer(dit_path, load_device, weight_dtype)
-            if use_usp:
-                # Prepare state dict for broadcasting
-                state_dict = {
-                    "transformer": self.transformer.state_dict(),
-                }
+            transformer_state_dict = self.transformer.state_dict() if use_usp else None
         else:
             # 20250423 pftq: Non-rank-0: Initialize empty models to avoid disk I/O
             print(f"[Rank {local_rank}] Skipping weights for transformer...")
             self.transformer = get_transformer(dit_path, load_device, weight_dtype, skip_weights=True)  # 20250423 pftq: Requires skip_weights modification to modules.__init__.py
-            state_dict = None
+            transformer_state_dict = None
 
-        if use_usp:
-            # 20250423 pftq: Broadcast transformer weights from rank 0
-            dist.barrier()  # Ensure rank 0 loads first
-            print(f"[Rank {local_rank}] Broadcasting weights for transformer...")
-            broadcast_list = [state_dict]
-            dist.broadcast_object_list(broadcast_list, src=0)
-            state_dict = broadcast_list[0]
-            # 20250423 pftq: Load broadcasted weights on all ranks
-            self.transformer.load_state_dict(state_dict["transformer"])
-            dist.barrier()  # 20250423 pftq: Synchronize ranks
-
-        # 20250423 pftq: Stagger text encoder loading across ranks
-        if use_usp:
-            for rank in range(dist.get_world_size()):
-                if local_rank == rank:
-                    print(f"[Rank {local_rank}] Loading text encoder...")
-                    self.text_encoder = get_text_encoder(model_path, load_device, weight_dtype)
-                dist.barrier()
-        else:
+        # 20250423 pftq: Load text encoder only on rank 0 or single-GPU
+        if not use_usp or local_rank == 0:
             print(f"[Rank {local_rank}] Loading text encoder...")
             self.text_encoder = get_text_encoder(model_path, load_device, weight_dtype)
+            text_encoder_state_dict = self.text_encoder.state_dict() if use_usp else None
+        else:
+            print(f"[Rank {local_rank}] Initializing empty text encoder...")
+            self.text_encoder = get_text_encoder(model_path, load_device, weight_dtype, skip_weights=True)
+            text_encoder_state_dict = None
 
+        if use_usp:
+            # 20250423 pftq: Broadcast transformer weights and text encoder from rank 0
+            dist.barrier()  # Ensure rank 0 loads first
+            print(f"[Rank {local_rank}] Broadcasting weights for transformer and text encoder...")
+            broadcast_list = [transformer_state_dict, text_encoder_state_dict]
+            dist.broadcast_object_list(broadcast_list, src=0)
+            transformer_state_dict, text_encoder_state_dict = broadcast_list
+            # 20250423 pftq: Load broadcasted weights on all ranks
+            self.transformer.load_state_dict(transformer_state_dict)
+            self.text_encoder.load_state_dict(text_encoder_state_dict)
+            dist.barrier()  # 20250423 pftq: Synchronize ranks
+        
         # 20250423 pftq: Load VAE on all ranks with optional staggering to reduce I/O contention
         vae_model_path = os.path.join(model_path, "Wan2.1_VAE.pth")
         if use_usp:
