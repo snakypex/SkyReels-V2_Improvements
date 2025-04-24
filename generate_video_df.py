@@ -177,8 +177,9 @@ if __name__ == "__main__":
         gc.collect()
         torch.cuda.empty_cache()
 
-    # 20250423 pftq: needs to be fixed, 20-min load times on multi-GPU caused by contention
+    # 20250423 pftq: fixed 20-min load times on multi-GPU caused by contention, reduced down to 12 min roughly the same as single GPU.
     print("Initializing pipe at "+time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime()))
+    starttime = time.time()
     pipe = DiffusionForcingPipeline(
         args.model_id,
         dit_path=args.model_id,
@@ -187,7 +188,8 @@ if __name__ == "__main__":
         use_usp=args.use_usp,
         offload=args.offload,
     )
-    print("Finished initializing pipe at "+time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime()))
+    totaltime = time.time()-starttime
+    print("Finished initializing pipe at "+time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())+" ("+str(int(totaltime))+" seconds)")
 
     if args.causal_attention:
         pipe.transformer.set_ar_attention(args.causal_block_size)
