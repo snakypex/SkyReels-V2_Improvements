@@ -27,18 +27,21 @@ def get_vae(model_path, device="cuda", weight_dtype=torch.float32) -> WanVAE:
     return vae
 
 
-def get_transformer(model_path, device="cuda", weight_dtype=torch.bfloat16) -> WanModel:
+def get_transformer(model_path, device="cuda", weight_dtype=torch.bfloat16, skip_weights=False) -> WanModel:
+    # 20250423 pftq: Added skip_weights parameter to initialize empty model
     config_path = os.path.join(model_path, "config.json")
     transformer = WanModel.from_config(config_path).to(weight_dtype).to(device)
 
-    for file in os.listdir(model_path):
-        if file.endswith(".safetensors"):
-            file_path = os.path.join(model_path, file)
-            state_dict = load_file(file_path)
-            transformer.load_state_dict(state_dict, strict=False)
-            del state_dict
-            gc.collect()
-            torch.cuda.empty_cache()
+    if not skip_weights:
+        # 20250423 pftq: Only load weights if skip_weights=False
+        for file in os.listdir(model_path):
+            if file.endswith(".safetensors"):
+                file_path = os.path.join(model_path, file)
+                state_dict = load_file(file_path)
+                transformer.load_state_dict(state_dict, strict=False)
+                del state_dict
+                gc.collect()
+                torch.cuda.empty_cache()
 
     transformer.requires_grad_(False)
     transformer.eval()
