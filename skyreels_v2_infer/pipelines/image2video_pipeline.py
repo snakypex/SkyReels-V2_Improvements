@@ -86,6 +86,7 @@ class Image2VideoPipeline:
                 print(f"[Rank {local_rank}] Loading broadcasted transformer...")
                 transformer_state_dict = transformer_list[0]
                 self.transformer.load_state_dict(transformer_state_dict)
+            torch.cuda.empty_cache()
             dist.barrier()  # 20250423 pftq: Synchronize ranks
 
             # 20250423 pftq: Broadcast text encoder weights from rank 0
@@ -97,6 +98,7 @@ class Image2VideoPipeline:
                 print(f"[Rank {local_rank}] Loading broadcasted text encoder...")
                 text_encoder_state_dict = text_encoder_list[0]
                 self.text_encoder.load_state_dict(text_encoder_state_dict)
+            torch.cuda.empty_cache()
             dist.barrier()  # Synchronize ranks
 
         # 20250423 pftq: Stagger VAE loading across ranks
