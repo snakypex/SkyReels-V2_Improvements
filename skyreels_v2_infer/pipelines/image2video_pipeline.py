@@ -75,20 +75,27 @@ class Image2VideoPipeline:
             self.text_encoder = get_text_encoder(model_path, load_device, weight_dtype, skip_weights=True)
             text_encoder_state_dict = None
 
-        # 20250423 pftq: Broadcast transformer and text encoder weights from rank 0
+        # 20250423 pftq: Broadcast transformer from rank 0
         if use_usp:
             dist.barrier()  # Ensure rank 0 loads transformer and text encoder
-            broadcast_list = [transformer_state_dict, text_encoder_state_dict]
-            print(f"[Rank {local_rank}] Broadcasting weights for transformer and text encoder...")
-            dist.broadcast_object_list(broadcast_list, src=0)
-            transformer_state_dict, text_encoder_state_dict = broadcast_list
+            transformer_list = [transformer_state_dict]
+            print(f"[Rank {local_rank}] Broadcasting weights for transformer...")
+            dist.broadcast_object_list(transformer_list, src=0)
             # 20250423 pftq: Load broadcasted weights on all ranks. Skip redundant load_state_dict on rank 0
             if local_rank != 0:
-                print(f"[Rank {local_rank}] Loading broadcasted transformer and text encoder weights...")
+                print(f"[Rank {local_rank}] Loading broadcasted transformer...")
+                transformer_state_dict = transformer_list[0]
                 self.transformer.load_state_dict(transformer_state_dict)
-                # 20250423 pftq: Ensure text encoder is on CPU before load_state_dict if offload=True
-                if offload:
-                    self.text_encoder = self.text_encoder.to("cpu")
+            dist.barrier()  # 20250423 pftq: Synchronize ranks
+
+            # 20250423 pftq: Broadcast text encoder weights from rank 0
+            print(f"[Rank {local_rank}] Broadcasting weights for text encoder...")
+            text_encoder_list = [text_encoder_state_dict]
+            dist.broadcast_object_list(text_encoder_list, src=0)
+            # 20250423 pftq: Load broadcasted weights on all ranks. Skip redundant load_state_dict on rank 0
+            if local_rank != 0:
+                print(f"[Rank {local_rank}] Loading broadcasted text encoder...")
+                text_encoder_state_dict = text_encoder_list[0]
                 self.text_encoder.load_state_dict(text_encoder_state_dict)
             dist.barrier()  # Synchronize ranks
 
