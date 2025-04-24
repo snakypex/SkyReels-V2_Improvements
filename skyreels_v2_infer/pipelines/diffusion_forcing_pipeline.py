@@ -97,9 +97,14 @@ class DiffusionForcingPipeline:
             broadcast_list = [transformer_state_dict, text_encoder_state_dict]
             dist.broadcast_object_list(broadcast_list, src=0)
             transformer_state_dict, text_encoder_state_dict = broadcast_list
-            # 20250423 pftq: Load broadcasted weights on all ranks
-            self.transformer.load_state_dict(transformer_state_dict)
-            self.text_encoder.load_state_dict(text_encoder_state_dict)
+            # 20250423 pftq: Load broadcasted weights on all ranks. Skip redundant load_state_dict on rank 0
+            if local_rank != 0:
+                print(f"[Rank {local_rank}] Loading broadcasted transformer and text encoder weights...")
+                self.transformer.load_state_dict(transformer_state_dict)
+                # 20250423 pftq: Ensure text encoder is on CPU before load_state_dict if offload=True
+                if offload:
+                    self.text_encoder = self.text_encoder.to("cpu")
+                self.text_encoder.load_state_dict(text_encoder_state_dict)
             dist.barrier()  # 20250423 pftq: Synchronize ranks
         
         # 20250423 pftq: Load VAE on all ranks with optional staggering to reduce I/O contention
