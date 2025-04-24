@@ -84,6 +84,9 @@ if __name__ == "__main__":
     image = args.image.convert("RGB") if args.image else None
 
     video = []
+    pre_video_length = 17
+    if args.overlap_history is not None:
+        pre_video_length = args.overlap_history
     if args.video:
         args.video = load_video(args.video) 
         arg_width = width
@@ -94,7 +97,7 @@ if __name__ == "__main__":
                 height, width = arg_width, arg_height
             img = resizecrop(img, height, width)
             video.append(img.convert("RGB").resize((width, height)))
-            video = video[-17:]
+            video = video[-pre_video_length:]
     else:
         video = None
     
