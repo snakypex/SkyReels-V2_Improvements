@@ -142,6 +142,9 @@ if __name__ == "__main__":
         gc.collect()
         torch.cuda.empty_cache()
 
+    # 20250423 pftq: needs fixing, 20-min load times on multi-GPU caused by contention, DF already reduced down to 12 min roughly the same as single GPU.
+    print("Initializing pipe at "+time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime()))
+    starttime = time.time()
     if image is None:
         assert "T2V" in args.model_id, f"check model_id:{args.model_id}"
         print("init text2video pipeline")
@@ -154,6 +157,8 @@ if __name__ == "__main__":
         pipe = Image2VideoPipeline(
             model_path=args.model_id, dit_path=args.model_id, use_usp=args.use_usp, offload=args.offload
         )
+    totaltime = time.time()-starttime
+    print("Finished initializing pipe at "+time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())+" ("+str(int(totaltime))+" seconds)")
 
     prompt_input = args.prompt
     if args.prompt_enhancer and image is not None:
