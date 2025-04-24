@@ -51,14 +51,74 @@ class DiffusionForcingPipeline:
             device (str): Device to run on, defaults to 'cuda'
             weight_dtype: Weight data type, defaults to torch.bfloat16
         """
-        load_device = "cpu" if offload else device
-        self.transformer = get_transformer(dit_path, load_device, weight_dtype)
-        vae_model_path = os.path.join(model_path, "Wan2.1_VAE.pth")
-        self.vae = get_vae(vae_model_path, device, weight_dtype=torch.float32)
-        self.text_encoder = get_text_encoder(model_path, load_device, weight_dtype)
-        self.video_processor = VideoProcessor(vae_scale_factor=16)
+
+        # 20250423 pftq: Fixed 20-min multi-gpu load time by loading on Rank 0 first and broadcasting
+        
+        import torch.distributed as dist  # 20250423 pftq: Added for rank checking and broadcasting
         self.device = device
         self.offload = offload
+        load_device = "cpu" if offload else device
+
+        # 20250423 pftq: Check rank and distributed mode
+        if use_usp:
+            if not dist.is_initialized():
+                raise RuntimeError("Distributed environment must be initialized with dist.init_process_group before using use_usp=True")
+            local_rank = dist.get_rank()
+        else:
+            local_rank = 0
+
+        print(f"[Rank {local_rank}] Initializing pipeline components...")
+
+        # 20250423 pftq: Load transformer only on rank 0 or single-GPU
+        if not use_usp or local_rank == 0:
+            print(f"[Rank {local_rank}] Loading transformer...")
+            self.transformer = get_transformer(dit_path, load_device, weight_dtype)
+            if use_usp:
+                # Prepare state dict for broadcasting
+                state_dict = {
+                    "transformer": self.transformer.state_dict(),
+                }
+        else:
+            # 20250423 pftq: Non-rank-0: Initialize empty models to avoid disk I/O
+            print(f"[Rank {local_rank}] Skipping weights for transformer...")
+            self.transformer = get_transformer(dit_path, load_device, weight_dtype, skip_weights=True)  # 20250423 pftq: Requires skip_weights modification to modules.__init__.py
+            state_dict = None
+
+        if use_usp:
+            # 20250423 pftq: Broadcast transformer weights from rank 0
+            dist.barrier()  # Ensure rank 0 loads first
+            print(f"[Rank {local_rank}] Broadcasting weights for transformer...")
+            broadcast_list = [state_dict]
+            dist.broadcast_object_list(broadcast_list, src=0)
+            state_dict = broadcast_list[0]
+            # 20250423 pftq: Load broadcasted weights on all ranks
+            self.transformer.load_state_dict(state_dict["transformer"])
+            dist.barrier()  # 20250423 pftq: Synchronize ranks
+
+        # 20250423 pftq: Stagger text encoder loading across ranks
+        if use_usp:
+            for rank in range(dist.get_world_size()):
+                if local_rank == rank:
+                    print(f"[Rank {local_rank}] Loading text encoder...")
+                    self.text_encoder = get_text_encoder(model_path, load_device, weight_dtype)
+                dist.barrier()
+        else:
+            print(f"[Rank {local_rank}] Loading text encoder...")
+            self.text_encoder = get_text_encoder(model_path, load_device, weight_dtype)
+
+        # 20250423 pftq: Load VAE on all ranks with optional staggering to reduce I/O contention
+        vae_model_path = os.path.join(model_path, "Wan2.1_VAE.pth")
+        if use_usp:
+            # 20250423 pftq: Stagger VAE loading across ranks to avoid contention
+            for rank in range(dist.get_world_size()):
+                if local_rank == rank:
+                    print(f"[Rank {local_rank}] Loading VAE...")
+                    self.vae = get_vae(vae_model_path, device, weight_dtype=torch.float32)
+                dist.barrier()
+        else:
+            self.vae = get_vae(vae_model_path, device, weight_dtype=torch.float32)
+
+        self.video_processor = VideoProcessor(vae_scale_factor=16)
 
         if use_usp:
             from xfuser.core.distributed import get_sequence_parallel_world_size
@@ -67,8 +127,8 @@ class DiffusionForcingPipeline:
 
             for block in self.transformer.blocks:
                 block.self_attn.forward = types.MethodType(usp_attn_forward, block.self_attn)
-                self.transformer.forward = types.MethodType(usp_dit_forward, self.transformer)
-                self.sp_size = get_sequence_parallel_world_size()
+            self.transformer.forward = types.MethodType(usp_dit_forward, self.transformer)
+            self.sp_size = get_sequence_parallel_world_size()
 
         self.scheduler = FlowUniPCMultistepScheduler()
 
