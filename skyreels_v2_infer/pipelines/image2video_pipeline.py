@@ -39,15 +39,78 @@ class Image2VideoPipeline:
     def __init__(
         self, model_path, dit_path, device: str = "cuda", weight_dtype=torch.bfloat16, use_usp=False, offload=False
     ):
+        # 20250423 pftq: Fixed load time by broadcasting transformer and staggering text encoder, VAE, image encoder
+        import torch.distributed as dist  
         load_device = "cpu" if offload else device
-        self.transformer = get_transformer(dit_path, load_device, weight_dtype)
-        vae_model_path = os.path.join(model_path, "Wan2.1_VAE.pth")
-        self.vae = get_vae(vae_model_path, device, weight_dtype=torch.float32)
-        self.text_encoder = get_text_encoder(model_path, load_device, weight_dtype)
-        self.clip = get_image_encoder(model_path, load_device, weight_dtype)
-        self.sp_size = 1
         self.device = device
         self.offload = offload
+
+        # 20250423 pftq: Check rank and distributed mode
+        if use_usp:
+            if not dist.is_initialized():
+                raise RuntimeError("Distributed environment must be initialized with dist.init_process_group before using use_usp=True")
+            local_rank = dist.get_rank()
+        else:
+            local_rank = 0
+
+        print(f"[Rank {local_rank}] Initializing pipeline components...")
+
+        # 20250423 pftq: Load transformer only on rank 0 or single-GPU
+        if not use_usp or local_rank == 0:
+            print(f"[Rank {local_rank}] Loading transformer...")
+            self.transformer = get_transformer(dit_path, load_device, weight_dtype, skip_weights=False)
+            transformer_state_dict = self.transformer.state_dict() if use_usp else None
+        else:
+            print(f"[Rank {local_rank}] Skipping weights for transformer...")
+            self.transformer = get_transformer(dit_path, load_device, weight_dtype, skip_weights=True)
+            transformer_state_dict = None
+
+        # 20250423 pftq: Broadcast transformer weights from rank 0
+        if use_usp:
+            dist.barrier()  # Ensure rank 0 loads transformer
+            broadcast_list = [transformer_state_dict]
+            print(f"[Rank {local_rank}] Broadcasting weights for transformer...")
+            dist.broadcast_object_list(broadcast_list, src=0)
+            transformer_state_dict = broadcast_list[0]
+            print(f"[Rank {local_rank}] Loading broadcasted transformer weights...")
+            self.transformer.load_state_dict(transformer_state_dict)
+            dist.barrier()  # Synchronize ranks
+
+        # 20250423 pftq: Stagger text encoder loading across ranks
+        if use_usp:
+            for rank in range(dist.get_world_size()):
+                if local_rank == rank:
+                    print(f"[Rank {local_rank}] Loading text encoder...")
+                    self.text_encoder = get_text_encoder(model_path, load_device, weight_dtype)
+                dist.barrier()
+        else:
+            print(f"[Rank {local_rank}] Loading text encoder...")
+            self.text_encoder = get_text_encoder(model_path, load_device, weight_dtype)
+
+        # 20250423 pftq: Stagger VAE loading across ranks
+        vae_model_path = os.path.join(model_path, "Wan2.1_VAE.pth")
+        if use_usp:
+            for rank in range(dist.get_world_size()):
+                if local_rank == rank:
+                    print(f"[Rank {local_rank}] Loading VAE...")
+                    self.vae = get_vae(vae_model_path, device, weight_dtype=torch.float32)
+                dist.barrier()
+        else:
+            print(f"[Rank {local_rank}] Loading VAE...")
+            self.vae = get_vae(vae_model_path, device, weight_dtype=torch.float32)
+
+        # 20250423 pftq: Stagger image encoder loading across ranks
+        if use_usp:
+            for rank in range(dist.get_world_size()):
+                if local_rank == rank:
+                    print(f"[Rank {local_rank}] Loading image encoder...")
+                    self.clip = get_image_encoder(model_path, load_device, weight_dtype)
+                dist.barrier()
+        else:
+            print(f"[Rank {local_rank}] Loading image encoder...")
+            self.clip = get_image_encoder(model_path, load_device, weight_dtype)
+
+        self.sp_size = 1
         self.video_processor = VideoProcessor(vae_scale_factor=16)
         if use_usp:
             from xfuser.core.distributed import get_sequence_parallel_world_size
@@ -56,8 +119,9 @@ class Image2VideoPipeline:
 
             for block in self.transformer.blocks:
                 block.self_attn.forward = types.MethodType(usp_attn_forward, block.self_attn)
+                # 20250423 pftq: Fixed indentation and removed duplicate forward assignment
                 self.transformer.forward = types.MethodType(usp_dit_forward, self.transformer)
-                self.sp_size = get_sequence_parallel_world_size()
+            self.sp_size = get_sequence_parallel_world_size()
 
         self.scheduler = FlowUniPCMultistepScheduler()
         self.vae_stride = (4, 8, 8)
