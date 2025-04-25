@@ -8,6 +8,9 @@ import imageio
 import torch
 from diffusers.utils import load_image
 
+from PIL import Image  #20250422 pftq: Added for image resizing and cropping
+import numpy as np  #20250422 pftq: Added for seed synchronization
+
 from skyreels_v2_infer.modules import download_model
 from skyreels_v2_infer.pipelines import Image2VideoPipeline
 from skyreels_v2_infer.pipelines import PromptEnhancer
@@ -41,52 +44,27 @@ if __name__ == "__main__":
     parser.add_argument("--use_usp", action="store_true")
     parser.add_argument("--offload", action="store_true")
     parser.add_argument("--fps", type=int, default=24)
-    parser.add_argument("--seed", type=int, default=None)
+    parser.add_argument("--seed", type=int, default=-1)
     parser.add_argument(
         "--prompt",
         type=str,
         default="A serene lake surrounded by towering mountains, with a few swans gracefully gliding across the water and sunlight dancing on the surface.",
     )
     parser.add_argument("--prompt_enhancer", action="store_true")
-    parser.add_argument("--teacache", action="store_true")
-    parser.add_argument(
-        "--teacache_thresh",
-        type=float,
-        default=0.2,
-        help="Higher speedup will cause to worse quality -- 0.1 for 2.0x speedup -- 0.2 for 3.0x speedup")
-    parser.add_argument(
-        "--use_ret_steps",
-        action="store_true",
-        help="Using Retention Steps will result in faster generation speed and better generation quality.")
+
+    parser.add_argument("--batch_size", type=int, default=1) # 20250422 pftq: Batch functionality to avoid reloading the model each video
+    parser.add_argument("--preserve_image_aspect_ratio", action="store_true")  # 20250422 pftq: Avoid resizing
+    parser.add_argument("--negative_prompt", type=str, default="Bright tones, overexposed, static, blurred details, subtitles, style, works, paintings, images, static, overall gray, worst quality, low quality, JPEG compression residue, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn faces, deformed, disfigured, misshapen limbs, fused fingers, still picture, messy background, three legs, many people in the background, walking backwards") # 20250422 pftq: expose negative prompt
+    
     args = parser.parse_args()
 
     args.model_id = download_model(args.model_id)
     print("model_id:", args.model_id)
 
-    assert (args.use_usp and args.seed is not None) or (not args.use_usp), "usp mode need seed"
-    if args.seed is None:
-        random.seed(time.time())
-        args.seed = int(random.randrange(4294967294))
+    #20250422 pftq: unneeded with seed synchronization code
+    #assert (args.use_usp and args.seed is not None) or (not args.use_usp), "usp mode need seed"
 
-    if args.resolution == "540P":
-        height = 544
-        width = 960
-    elif args.resolution == "720P":
-        height = 720
-        width = 1280
-    else:
-        raise ValueError(f"Invalid resolution: {args.resolution}")
-
-
-    import psutil
-    memory_usage = psutil.virtual_memory().percent
-    print(f"RAM Usage: {memory_usage}%")
-
-    image = load_image(args.image).convert("RGB") if args.image else None
-    negative_prompt = "Bright tones, overexposed, static, blurred details, subtitles, style, works, paintings, images, static, overall gray, worst quality, low quality, JPEG compression residue, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn faces, deformed, disfigured, misshapen limbs, fused fingers, still picture, messy background, three legs, many people in the background, walking backwards"
     local_rank = 0
-    memory_usage = psutil.virtual_memory().percent
-    print(f"RAM Usage: {memory_usage}%")
     if args.use_usp:
         assert not args.prompt_enhancer, "`--prompt_enhancer` is not allowed if using `--use_usp`. We recommend running the skyreels_v2_infer/pipelines/prompt_enhancer.py script first to generate enhanced prompt before enabling the `--use_usp` parameter."
         from xfuser.core.distributed import initialize_model_parallel, init_distributed_environment
@@ -104,9 +82,53 @@ if __name__ == "__main__":
             ring_degree=1,
             ulysses_degree=dist.get_world_size(),
         )
-        memory_usage = psutil.virtual_memory().percent
-        print(f"RAM Usage: {memory_usage}%")
 
+    if args.resolution == "540P":
+        height = 544
+        width = 960
+    elif args.resolution == "720P":
+        height = 720
+        width = 1280
+    else:
+        raise ValueError(f"Invalid resolution: {args.resolution}")
+
+    #image = load_image(args.image).convert("RGB") if args.image else None
+
+        
+    #20250422 pftq: Add error handling for image loading, aspect ratio preservation
+    image = None
+    if args.image:  
+        try:
+            image = load_image(args.image).convert("RGB")
+
+            # 20250422 pftq: option to preserve image aspect ratio
+            if args.preserve_image_aspect_ratio:
+                img_width, img_height = image.size
+                if img_height > img_width:
+                    height, width = width, height
+                    width = int(height / img_height * img_width)
+                else:
+                    height = int(width / img_width * img_height)
+
+                divisibility=16
+                if width%divisibility!=0:
+                        width = width - (width%divisibility)
+                if height%divisibility!=0:
+                        height = height - (height%divisibility)
+
+                image = resizecrop(image, height, width)
+            else:
+                image_width, image_height = image.size
+                if image_height > image_width:
+                    height, width = width, height
+                image = resizecrop(image, height, width)
+        except Exception as e:
+            raise ValueError(f"Failed to load or process image: {e}")
+
+    print(f"Rank {local_rank}: {width}x{height} | Image: "+str(image!=None))
+    
+    negative_prompt = args.negative_prompt # 20250422 pftq: allow editable negative prompt
+            
     prompt_input = args.prompt
     if args.prompt_enhancer and args.image is None:
         print(f"init prompt enhancer")
@@ -116,8 +138,10 @@ if __name__ == "__main__":
         del prompt_enhancer
         gc.collect()
         torch.cuda.empty_cache()
-    memory_usage = psutil.virtual_memory().percent
-    print(f"RAM Usage: {memory_usage}%")
+
+    # 20250423 pftq: needs fixing, 20-min load times on multi-GPU caused by contention, DF already reduced down to 12 min roughly the same as single GPU.
+    print("Initializing pipe at "+time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime()))
+    starttime = time.time()
     if image is None:
         assert "T2V" in args.model_id, f"check model_id:{args.model_id}"
         print("init text2video pipeline")
@@ -130,48 +154,86 @@ if __name__ == "__main__":
         pipe = Image2VideoPipeline(
             model_path=args.model_id, dit_path=args.model_id, use_usp=args.use_usp, offload=args.offload
         )
-        args.image = load_image(args.image)
-        image_width, image_height = args.image.size
-        if image_height > image_width:
-            height, width = width, height
-        args.image = resizecrop(args.image, height, width)
+    totaltime = time.time()-starttime
+    print("Finished initializing pipe at "+time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())+" ("+str(int(totaltime))+" seconds)")
 
-    memory_usage = psutil.virtual_memory().percent
-    print(f"RAM Usage: {memory_usage}%")
-    if args.teacache:
-        pipe.transformer.initialize_teacache(enable_teacache=True, num_steps=args.inference_steps, 
-                                             teacache_thresh=args.teacache_thresh, use_ret_steps=args.use_ret_steps, 
-                                             ckpt_dir=args.model_id)
-        
     prompt_input = args.prompt
     if args.prompt_enhancer and image is not None:
         prompt_input = prompt_enhancer(prompt_input)
         print(f"enhanced prompt: {prompt_input}")
 
-    kwargs = {
-        "prompt": prompt_input,
-        "negative_prompt": negative_prompt,
-        "num_frames": args.num_frames,
-        "num_inference_steps": args.inference_steps,
-        "guidance_scale": args.guidance_scale,
-        "shift": args.shift,
-        "generator": torch.Generator(device="cuda").manual_seed(args.seed),
-        "height": height,
-        "width": width,
-    }
 
-    if image is not None:
-        kwargs["image"] = args.image.convert("RGB")
+    #20250422 pftq: Set preferred linear algebra backend to avoid cuSOLVER issues
+    torch.backends.cuda.preferred_linalg_library("default")  # or try "magma" if available
+    
+    for idx in range(args.batch_size): # 20250422 pftq: implemented --batch_size
+        if local_rank == 0:
+            print(f"Generating video {idx+1} of {args.batch_size}")
 
-    save_dir = os.path.join("result", args.outdir)
-    os.makedirs(save_dir, exist_ok=True)
+        #20250422 pftq: Synchronize seed across all ranks
+        if args.use_usp:
+            try:
+                #20250422 pftq: Synchronize ranks before seed broadcasting
+                dist.barrier()
 
-    with torch.cuda.amp.autocast(dtype=pipe.transformer.dtype), torch.no_grad():
-        print(f"infer kwargs:{kwargs}")
-        video_frames = pipe(**kwargs)[0]
+                #20250422 pftq: Always broadcast seed to ensure consistency
+                if local_rank == 0:
+                    if args.seed == -1 or args.seed is None or idx > 0:
+                        args.seed = int(random.randrange(4294967294))
+                seed_tensor = torch.tensor(args.seed, dtype=torch.int64, device="cuda")
+                dist.broadcast(seed_tensor, src=0)
+                args.seed = seed_tensor.item()
 
-    if local_rank == 0:
-        current_time = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
-        video_out_file = f"{args.prompt[:100].replace('/','')}_{args.seed}_{current_time}.mp4"
-        output_path = os.path.join(save_dir, video_out_file)
-        imageio.mimwrite(output_path, video_frames, fps=args.fps, quality=8, output_params=["-loglevel", "error"])
+                #20250422 pftq: Synchronize ranks after seed broadcasting
+                dist.barrier()
+            except Exception as e:
+                print(f"[Rank {local_rank}] Seed broadcasting error: {e}")
+                dist.destroy_process_group()
+                raise
+
+        else:
+            #20250422 pftq: Single GPU seed initialization
+            if args.seed == -1 or idx > 0:
+                args.seed = int(random.randrange(4294967294))
+
+        random.seed(args.seed)
+        np.random.seed(args.seed)
+        torch.manual_seed(args.seed)
+        torch.cuda.manual_seed_all(args.seed)
+        
+        kwargs = {
+            "prompt": prompt_input,
+            "negative_prompt": negative_prompt,
+            "num_frames": args.num_frames,
+            "num_inference_steps": args.inference_steps,
+            "guidance_scale": args.guidance_scale,
+            "shift": args.shift,
+            "generator": torch.Generator(device="cuda").manual_seed(args.seed),
+            "height": height,
+            "width": width,
+        }
+    
+        if image is not None:
+            #kwargs["image"] = load_image(args.image).convert("RGB") 
+            # 20250422 pftq: redundant reloading of the image
+            kwargs["image"] = image
+    
+        save_dir = os.path.join("result", args.outdir)
+        os.makedirs(save_dir, exist_ok=True)
+    
+        with torch.cuda.amp.autocast(dtype=pipe.transformer.dtype), torch.no_grad():
+            print(f"infer kwargs:{kwargs}")
+            video_frames = pipe(**kwargs)[0]
+    
+        if local_rank == 0:
+            current_time = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
+            #video_out_file = f"{args.prompt[:100].replace('/','')}_{args.seed}_{current_time}.mp4"
+            
+            # 20250422 pftq: more useful filename
+            gpucount = ""
+            if args.use_usp and dist.get_world_size():
+                gpucount = "_"+str(dist.get_world_size())+"xGPU"
+            video_out_file = f"{current_time}_skyreels2_{args.resolution}-{args.num_frames}f_cfg{args.guidance_scale}_steps{args.inference_steps}_seed{args.seed}{gpucount}_{args.prompt[:100].replace('/','')}_{idx}.mp4" 
+            
+            output_path = os.path.join(save_dir, video_out_file)
+            imageio.mimwrite(output_path, video_frames, fps=args.fps, quality=8, output_params=["-loglevel", "error"])
