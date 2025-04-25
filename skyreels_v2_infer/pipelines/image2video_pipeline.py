@@ -228,7 +228,7 @@ class Image2VideoPipeline:
                 "y": y,
             }
 
-            self.transformer.to(self.device)
+            #self.transformer.to(self.device) # 20250425 pftq: loaded twice, causes OOM on 48GB VRAM cards
             for _, t in enumerate(tqdm(timesteps)):
                 latent_model_input = torch.stack([latent]).to(self.device)
                 timestep = torch.stack([t]).to(self.device)
