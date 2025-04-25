@@ -91,11 +91,11 @@ Change "DF" to "I2V' or "T2V" accordingly if you don't want to use the infinite 
 </p>
 
 ---
-Welcome to the SkyReels V2 repository! Here, you'll find the model weights and inference code for our infinite-length film generative models
+Welcome to the **SkyReels V2** repository! Here, you'll find the model weights and inference code for our infinite-length film generative models. To the best of our knowledge, it represents the first open-source video generative model employing **AutoRegressive Diffusion-Forcing architecture** that achieves the **SOTA performance** among publicly available models.
 
 
 ## 🔥🔥🔥 News!!
-
+* Apr 24, 2025: 🔥 We release the 720P models, [SkyReels-V2-DF-14B-720P](https://huggingface.co/Skywork/SkyReels-V2-DF-14B-720P) and [SkyReels-V2-I2V-14B-720P](https://huggingface.co/Skywork/SkyReels-V2-I2V-14B-720P). The former facilitates infinite-length autoregressive video generation, and the latter focuses on Image2Video synthesis.
 * Apr 21, 2025: 👋 We release the inference code and model weights of [SkyReels-V2](https://huggingface.co/collections/Skywork/skyreels-v2-6801b1b93df627d441d0d0d9) Series Models and the video captioning model [SkyCaptioner-V1](https://huggingface.co/Skywork/SkyCaptioner-V1) .
 * Apr 3, 2025: 🔥 We also release [SkyReels-A2](https://github.com/SkyworkAI/SkyReels-A2). This is an open-sourced controllable video generation framework capable of assembling arbitrary visual elements.
 * Feb 18, 2025: 🔥 we released [SkyReels-A1](https://github.com/SkyworkAI/SkyReels-A1). This is an open-sourced and effective framework for portrait image animation.
@@ -178,7 +178,7 @@ You can download our models from Hugging Face:
     <tr>
       <td>14B-720P</td>
       <td>720 * 1280 * 121f</td>
-      <td>Coming Soon</td>
+      <td>🤗 <a href="https://huggingface.co/Skywork/SkyReels-V2-DF-14B-720P">Huggingface</a> 🤖 <a href="https://www.modelscope.cn/models/Skywork/SkyReels-V2-DF-14B-720P">ModelScope</a></td>
     </tr>
     <tr>
       <td rowspan="5">Text-to-Video</td>
@@ -230,7 +230,7 @@ You can download our models from Hugging Face:
     <tr>
       <td>14B-720P</td>
       <td>720 * 1280 * 121f</td>
-      <td>Coming Soon</td>
+      <td>🤗 <a href="https://huggingface.co/Skywork/SkyReels-V2-I2V-14B-720P">Huggingface</a> 🤖 <a href="https://www.modelscope.cn/models/Skywork/SkyReels-V2-I2V-14B-720P">ModelScope</a></td>
     </tr>
     <tr>
       <td rowspan="3">Camera Director</td>
