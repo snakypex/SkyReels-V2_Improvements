@@ -129,9 +129,6 @@ if __name__ == "__main__":
             raise ValueError(f"Failed to load or process image: {e}")
 
     print(f"Rank {local_rank}: {width}x{height} | Image: "+str(image!=None))
-
-    if args.use_usp:
-        dist.barrier()
     
     negative_prompt = args.negative_prompt # 20250422 pftq: allow editable negative prompt
 
