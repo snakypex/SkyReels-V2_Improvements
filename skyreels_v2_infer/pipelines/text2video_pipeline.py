@@ -34,28 +34,27 @@ class Text2VideoPipeline:
 
         print(f"[Rank {local_rank}] Initializing pipeline components...")
 
-        # 20250423 pftq: Load transformer only on rank 0 or single-GPU
-        if not use_usp or local_rank == 0:
-            print(f"[Rank {local_rank}] Loading transformer...")
+        vae_model_path = os.path.join(model_path, "Wan2.1_VAE.pth")
+        # 20250423 pftq: Load normally on single gpu
+        if not use_usp:
+            print(f"[Rank {local_rank}] Loading transformer to {load_device}...")
             self.transformer = get_transformer(dit_path, load_device, weight_dtype, skip_weights=False)
-            transformer_state_dict = self.transformer.state_dict() if use_usp else None
-        else:
-            print(f"[Rank {local_rank}] Skipping weights for transformer...")
-            self.transformer = get_transformer(dit_path, load_device, weight_dtype, skip_weights=True)
-            transformer_state_dict = None
-
-        # 20250423 pftq: Load text encoder only on rank 0 or single-GPU
-        if not use_usp or local_rank == 0:
-            print(f"[Rank {local_rank}] Loading text encoder...")
+            print(f"[Rank {local_rank}] Loading text encoder to {load_device}...")
             self.text_encoder = get_text_encoder(model_path, load_device, weight_dtype, skip_weights=False)
-            text_encoder_state_dict = self.text_encoder.state_dict() if use_usp else None
-        else:
-            print(f"[Rank {local_rank}] Initializing empty text encoder...")
-            self.text_encoder = get_text_encoder(model_path, load_device, weight_dtype, skip_weights=True)
-            text_encoder_state_dict = None
+            print(f"[Rank {local_rank}] Loading VAE...")
+            self.vae = get_vae(vae_model_path, device, weight_dtype=torch.float32)
 
         # 20250423 pftq: Broadcast transformer from rank 0
         if use_usp:
+            broadcast_device = "cpu" # tested to be more stable to start with cpu broadcast even if you have an H100
+            if local_rank == 0:
+                print(f"[Rank {local_rank}] Loading transformer to {broadcast_device}...")
+                self.transformer = get_transformer(dit_path, broadcast_device, weight_dtype, skip_weights=False)
+                transformer_state_dict = self.transformer.state_dict() 
+            else:
+                print(f"[Rank {local_rank}] Skipping transformer load...")
+                self.transformer = get_transformer(dit_path, broadcast_device, weight_dtype, skip_weights=True)
+                transformer_state_dict = None
             dist.barrier()  # Ensure rank 0 loads transformer and text encoder
             transformer_list = [transformer_state_dict]
             print(f"[Rank {local_rank}] Broadcasting weights for transformer...")
@@ -65,10 +64,26 @@ class Text2VideoPipeline:
                 print(f"[Rank {local_rank}] Loading broadcasted transformer...")
                 transformer_state_dict = transformer_list[0]
                 self.transformer.load_state_dict(transformer_state_dict)
+            dist.barrier() 
+            if offload:
+                print(f"[Rank {local_rank}] Moving transformer to cpu...")
+                self.transformer.cpu()
+            else:
+                print(f"[Rank {local_rank}] Moving transformer to {device}...")
+                self.transformer.to(device)
+            dist.barrier() 
             torch.cuda.empty_cache()
-            dist.barrier()  # 20250423 pftq: Synchronize ranks
-
+            
             # 20250423 pftq: Broadcast text encoder weights from rank 0
+            if local_rank == 0:
+                print(f"[Rank {local_rank}] Loading text encoder to {broadcast_device}...")
+                self.text_encoder = get_text_encoder(model_path, broadcast_device, weight_dtype, skip_weights=False)
+                text_encoder_state_dict = self.text_encoder.state_dict() 
+            else:
+                print(f"[Rank {local_rank}] Skipping text encoder load...")
+                self.text_encoder = get_text_encoder(model_path, broadcast_device, weight_dtype, skip_weights=True)
+                text_encoder_state_dict = None
+            dist.barrier()  # Ensure rank 0 loads transformer and text encoder
             print(f"[Rank {local_rank}] Broadcasting weights for text encoder...")
             text_encoder_list = [text_encoder_state_dict]
             dist.broadcast_object_list(text_encoder_list, src=0)
@@ -77,20 +92,22 @@ class Text2VideoPipeline:
                 print(f"[Rank {local_rank}] Loading broadcasted text encoder...")
                 text_encoder_state_dict = text_encoder_list[0]
                 self.text_encoder.load_state_dict(text_encoder_state_dict)
+            dist.barrier() 
+            if offload:
+                print(f"[Rank {local_rank}] Moving text encoder to cpu...")
+                self.text_encoder.cpu()
+            else:
+                print(f"[Rank {local_rank}] Moving text encoder to {device}...")
+                self.text_encoder.to(device)
+            dist.barrier() 
             torch.cuda.empty_cache()
-            dist.barrier()  # Synchronize ranks
 
-        # 20250423 pftq: Stagger VAE loading across ranks
-        vae_model_path = os.path.join(model_path, "Wan2.1_VAE.pth")
-        if use_usp:
+            # 20250423 pftq: Stagger VAE loading across ranks
             for rank in range(dist.get_world_size()):
                 if local_rank == rank:
                     print(f"[Rank {local_rank}] Loading VAE...")
                     self.vae = get_vae(vae_model_path, device, weight_dtype=torch.float32)
-                dist.barrier()
-        else:
-            print(f"[Rank {local_rank}] Loading VAE...")
-            self.vae = get_vae(vae_model_path, device, weight_dtype=torch.float32)
+                dist.barrier()  
 
         self.video_processor = VideoProcessor(vae_scale_factor=16)
         self.sp_size = 1
