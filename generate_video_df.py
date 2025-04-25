@@ -87,8 +87,8 @@ if __name__ == "__main__":
 
     guidance_scale = args.guidance_scale
     shift = args.shift
-    #image = load_image(args.image).convert("RGB") if args.image else None # 20250422 pftq: redefined further below to fix resizing/crop and allow maintaining aspect ratio 
-    #negative_prompt = "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走" # 20250422 pftq: redefined further below to allow input from commandline
+    image = load_image(args.image).convert("RGB") if args.image else None
+    negative_prompt = "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走" 
 
     save_dir = os.path.join("result", args.outdir)
     os.makedirs(save_dir, exist_ok=True)
