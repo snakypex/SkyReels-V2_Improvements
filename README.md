@@ -2,7 +2,7 @@
 - Added seed synchronization code to allow random seed with multi-GPU (https://github.com/SkyworkAI/SkyReels-V2/issues/24).
 - Reduced 20-min+ load time on multi-GPU to ~8min by fixing contention (all GPUs loading models at once). Indirectly also solved CPU RAM spike during multi-GPU (>200GB on 4 GPUs) (https://github.com/SkyworkAI/SkyReels-V2/issues/28).
 - Fixed CuSolver error that occasionally comes up in multi-GPU by presetting linear algebra library (https://github.com/SkyworkAI/SkyReels-V2/issues/37).
-- Fixed Out-of-Memory on I2V mode for <=50GB VRAM GPUs due to transformer model being loaded twice.
+- Removed duplicate model loading line on I2V pipe
 - Added batch_size parameter to allow multiple videos to generate without reloading the model, which takes about 20 min on multi-gpu so this saves a lot of time.
 - Added preserve_image_aspect_ratio parameter to allow preserving original image aspect ratio.
 - Fixed DF script not resize-cropping the image (I2V script does it but DF is missing the code).
