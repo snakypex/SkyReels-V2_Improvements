@@ -31,6 +31,8 @@ source /workspace/venv/bin/activate
 cd /workspace/SkyReels-V2
 ```
 
+Example prompts below.  If you run into memory/vram issues, you can reduce the base_num_frames while still having the same higher number on num_frames.  The point of the DF model is that now the whole video doesn't have to fit in VRAM and can be done in chunks.
+
 Example prompt (multi-GPU):
 ```
 model_id=Skywork/SkyReels-V2-DF-14B-540P
