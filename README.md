@@ -1,6 +1,6 @@
 ## Changes from pftq:
 - Added seed synchronization code to allow random seed with multi-GPU.
-- Fixed 20-min load time on multi-GPU due to contention (all GPUs loading models at once).
+- Reduced 20-min+ load time on multi-GPU to ~8min by fixing contention (all GPUs loading models at once). Indirectly also solved CPU RAM spike during multi-GPU (>200GB on 4 GPUs).
 - Fixed CuSolver error that occasionally comes up in multi-GPU by presetting linear algebra library.
 - Added batch_size parameter to allow multiple videos to generate without reloading the model, which takes about 20 min on multi-gpu so this saves a lot of time.
 - Added preserve_image_aspect_ratio parameter to allow preserving original image aspect ratio.
