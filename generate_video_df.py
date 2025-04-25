@@ -64,25 +64,6 @@ if __name__ == "__main__":
     #20250422 pftq: unneeded with seed synchronization code
     #assert (args.use_usp and args.seed != -1) or (not args.use_usp), "usp mode requires a valid seed"
 
-    local_rank = 0
-    if args.use_usp:
-        assert not args.prompt_enhancer, "`--prompt_enhancer` is not allowed if using `--use_usp`. We recommend running the skyreels_v2_infer/pipelines/prompt_enhancer.py script first to generate enhanced prompt before enabling the `--use_usp` parameter."
-        from xfuser.core.distributed import initialize_model_parallel, init_distributed_environment
-        import torch.distributed as dist
-
-        dist.init_process_group("nccl")
-        local_rank = dist.get_rank()
-        torch.cuda.set_device(dist.get_rank())
-        device = "cuda"
-
-        init_distributed_environment(rank=dist.get_rank(), world_size=dist.get_world_size())
-
-        initialize_model_parallel(
-            sequence_parallel_degree=dist.get_world_size(),
-            ring_degree=1,
-            ulysses_degree=dist.get_world_size(),
-        )
-
     if args.resolution == "540P":
         height = 544
         width = 960
@@ -108,6 +89,27 @@ if __name__ == "__main__":
     shift = args.shift
     image = load_image(args.image).convert("RGB") if args.image else None
     negative_prompt = "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走"
+
+    save_dir = os.path.join("result", args.outdir)
+    os.makedirs(save_dir, exist_ok=True)
+    local_rank = 0
+    if args.use_usp:
+        assert not args.prompt_enhancer, "`--prompt_enhancer` is not allowed if using `--use_usp`. We recommend running the skyreels_v2_infer/pipelines/prompt_enhancer.py script first to generate enhanced prompt before enabling the `--use_usp` parameter."
+        from xfuser.core.distributed import initialize_model_parallel, init_distributed_environment
+        import torch.distributed as dist
+
+        dist.init_process_group("nccl")
+        local_rank = dist.get_rank()
+        torch.cuda.set_device(dist.get_rank())
+        device = "cuda"
+
+        init_distributed_environment(rank=dist.get_rank(), world_size=dist.get_world_size())
+
+        initialize_model_parallel(
+            sequence_parallel_degree=dist.get_world_size(),
+            ring_degree=1,
+            ulysses_degree=dist.get_world_size(),
+        )
 
     #20250422 pftq: Add error handling for image loading, aspect ratio preservation
     image = None
@@ -142,9 +144,6 @@ if __name__ == "__main__":
     print(f"Rank {local_rank}: {width}x{height} | Image: "+str(image!=None))
     
     negative_prompt = args.negative_prompt # 20250422 pftq: allow editable negative prompt
-
-    save_dir = os.path.join("result", args.outdir)
-    os.makedirs(save_dir, exist_ok=True)
 
     prompt_input = args.prompt
     if args.prompt_enhancer and args.image is None:
