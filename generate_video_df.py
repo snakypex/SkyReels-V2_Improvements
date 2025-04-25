@@ -13,6 +13,7 @@ from skyreels_v2_infer import DiffusionForcingPipeline
 from skyreels_v2_infer.modules import download_model
 from skyreels_v2_infer.pipelines import resizecrop
 from skyreels_v2_infer.pipelines import PromptEnhancer
+from skyreels_v2_infer.pipelines import resizecrop
 
 if __name__ == "__main__":
 
@@ -51,11 +52,13 @@ if __name__ == "__main__":
         "--teacache_thresh",
         type=float,
         default=0.2,
-        help="Higher speedup will cause to worse quality -- 0.1 for 2.0x speedup -- 0.2 for 3.0x speedup")
+        help="Higher speedup will cause to worse quality -- 0.1 for 2.0x speedup -- 0.2 for 3.0x speedup",
+    )
     parser.add_argument(
         "--use_ret_steps",
         action="store_true",
-        help="Using Retention Steps will result in faster generation speed and better generation quality.")
+        help="Using Retention Steps will result in faster generation speed and better generation quality.",
+    )
     args = parser.parse_args()
 
     args.model_id = download_model(args.model_id)
@@ -87,14 +90,22 @@ if __name__ == "__main__":
 
     guidance_scale = args.guidance_scale
     shift = args.shift
-    image = load_image(args.image).convert("RGB") if args.image else None
+    if args.image:
+        args.image = load_image(args.image)
+        image_width, image_height = args.image.size
+        if image_height > image_width:
+            height, width = width, height
+        args.image = resizecrop(args.image, height, width)
+    image = args.image.convert("RGB") if args.image else None
     negative_prompt = "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走"
 
     save_dir = os.path.join("result", args.outdir)
     os.makedirs(save_dir, exist_ok=True)
     local_rank = 0
     if args.use_usp:
-        assert not args.prompt_enhancer, "`--prompt_enhancer` is not allowed if using `--use_usp`. We recommend running the skyreels_v2_infer/pipelines/prompt_enhancer.py script first to generate enhanced prompt before enabling the `--use_usp` parameter."
+        assert (
+            not args.prompt_enhancer
+        ), "`--prompt_enhancer` is not allowed if using `--use_usp`. We recommend running the skyreels_v2_infer/pipelines/prompt_enhancer.py script first to generate enhanced prompt before enabling the `--use_usp` parameter."
         from xfuser.core.distributed import initialize_model_parallel, init_distributed_environment
         import torch.distributed as dist
 
@@ -171,16 +182,23 @@ if __name__ == "__main__":
 
     if args.causal_attention:
         pipe.transformer.set_ar_attention(args.causal_block_size)
-    
+
     if args.teacache:
         if args.ar_step > 0:
-            num_steps = args.inference_steps + (((args.base_num_frames - 1)//4 + 1) // args.causal_block_size - 1) * args.ar_step
-            print('num_steps:', num_steps)
+            num_steps = (
+                args.inference_steps
+                + (((args.base_num_frames - 1) // 4 + 1) // args.causal_block_size - 1) * args.ar_step
+            )
+            print("num_steps:", num_steps)
         else:
             num_steps = args.inference_steps
-        pipe.transformer.initialize_teacache(enable_teacache=True, num_steps=num_steps, 
-                                             teacache_thresh=args.teacache_thresh, use_ret_steps=args.use_ret_steps, 
-                                             ckpt_dir=args.model_id)
+        pipe.transformer.initialize_teacache(
+            enable_teacache=True,
+            num_steps=num_steps,
+            teacache_thresh=args.teacache_thresh,
+            use_ret_steps=args.use_ret_steps,
+            ckpt_dir=args.model_id,
+        )
 
     #20250422 pftq: Set preferred linear algebra backend to avoid cuSOLVER issues
     torch.backends.cuda.preferred_linalg_library("default")  # or try "magma" if available

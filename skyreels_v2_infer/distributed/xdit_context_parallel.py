@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.amp as amp
 from torch.backends.cuda import sdp_kernel
@@ -57,6 +58,17 @@ def rope_apply(x, grid_sizes, freqs):
         # append to collection
         output.append(x_i)
     return torch.stack(output).float()
+
+
+def broadcast_should_calc(should_calc: bool) -> bool:
+    import torch.distributed as dist
+
+    device = torch.cuda.current_device()
+    int_should_calc = 1 if should_calc else 0
+    tensor = torch.tensor([int_should_calc], device=device, dtype=torch.int8)
+    dist.broadcast(tensor, src=0)
+    should_calc = tensor.item() == 1
+    return should_calc
 
 
 def usp_dit_forward(self, x, t, context, clip_fea=None, y=None, fps=None):
@@ -135,20 +147,84 @@ def usp_dit_forward(self, x, t, context, clip_fea=None, y=None, fps=None):
         e0 = torch.chunk(e0, get_sequence_parallel_world_size(), dim=2)[get_sequence_parallel_rank()]
     kwargs = dict(e=e0, grid_sizes=grid_sizes, freqs=self.freqs, context=context, block_mask=self.block_mask)
 
-    # Context Parallel
-    x = torch.chunk(x, get_sequence_parallel_world_size(), dim=1)[get_sequence_parallel_rank()]
+    if self.enable_teacache:
+        modulated_inp = e0 if self.use_ref_steps else e
+        # teacache
+        if self.cnt % 2 == 0:  # even -> conditon
+            self.is_even = True
+            if self.cnt < self.ret_steps or self.cnt >= self.cutoff_steps:
+                should_calc_even = True
+                self.accumulated_rel_l1_distance_even = 0
+            else:
+                rescale_func = np.poly1d(self.coefficients)
+                self.accumulated_rel_l1_distance_even += rescale_func(
+                    ((modulated_inp - self.previous_e0_even).abs().mean() / self.previous_e0_even.abs().mean())
+                    .cpu()
+                    .item()
+                )
+                if self.accumulated_rel_l1_distance_even < self.teacache_thresh:
+                    should_calc_even = False
+                else:
+                    should_calc_even = True
+                    self.accumulated_rel_l1_distance_even = 0
+            self.previous_e0_even = modulated_inp.clone()
+        else:  # odd -> unconditon
+            self.is_even = False
+            if self.cnt < self.ret_steps or self.cnt >= self.cutoff_steps:
+                should_calc_odd = True
+                self.accumulated_rel_l1_distance_odd = 0
+            else:
+                rescale_func = np.poly1d(self.coefficients)
+                self.accumulated_rel_l1_distance_odd += rescale_func(
+                    ((modulated_inp - self.previous_e0_odd).abs().mean() / self.previous_e0_odd.abs().mean())
+                    .cpu()
+                    .item()
+                )
+                if self.accumulated_rel_l1_distance_odd < self.teacache_thresh:
+                    should_calc_odd = False
+                else:
+                    should_calc_odd = True
+                    self.accumulated_rel_l1_distance_odd = 0
+            self.previous_e0_odd = modulated_inp.clone()
 
-    for block in self.blocks:
-        x = block(x, **kwargs)
+    x = torch.chunk(x, get_sequence_parallel_world_size(), dim=1)[get_sequence_parallel_rank()]
+    if self.enable_teacache:
+        if self.is_even:
+            should_calc_even = broadcast_should_calc(should_calc_even)
+            if not should_calc_even:
+                x += self.previous_residual_even
+            else:
+                ori_x = x.clone()
+                for block in self.blocks:
+                    x = block(x, **kwargs)
+                ori_x.mul_(-1)
+                ori_x.add_(x)
+                self.previous_residual_even = ori_x
+        else:
+            should_calc_odd = broadcast_should_calc(should_calc_odd)
+            if not should_calc_odd:
+                x += self.previous_residual_odd
+            else:
+                ori_x = x.clone()
+                for block in self.blocks:
+                    x = block(x, **kwargs)
+                ori_x.mul_(-1)
+                ori_x.add_(x)
+                self.previous_residual_odd = ori_x
+        self.cnt += 1
+        if self.cnt >= self.num_steps:
+            self.cnt = 0
+    else:
+        # Context Parallel
+        for block in self.blocks:
+            x = block(x, **kwargs)
 
     # head
     if e.ndim == 3:
         e = torch.chunk(e, get_sequence_parallel_world_size(), dim=1)[get_sequence_parallel_rank()]
     x = self.head(x, e)
-
     # Context Parallel
     x = get_sp_group().all_gather(x, dim=1)
-
     # unpatchify
     x = self.unpatchify(x, grid_sizes)
     return x.float()
