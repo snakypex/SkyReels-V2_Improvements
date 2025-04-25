@@ -34,7 +34,7 @@ if __name__ == "__main__":
     parser.add_argument("--use_usp", action="store_true")
     parser.add_argument("--offload", action="store_true")
     parser.add_argument("--fps", type=int, default=24)
-    parser.add_argument("--seed", type=int, default=None)
+    parser.add_argument("--seed", type=int, default=-1)
 
     parser.add_argument("--batch_size", type=int, default=1) # 20250422 pftq: Batch functionality to avoid reloading the model each video
     parser.add_argument("--preserve_image_aspect_ratio", action="store_true")  # 20250422 pftq: Avoid resizing
@@ -179,7 +179,7 @@ if __name__ == "__main__":
 
                 #20250422 pftq: Always broadcast seed to ensure consistency
                 if local_rank == 0:
-                    if args.seed == -1 or args.seed is None or idx > 0:
+                    if args.seed == -1 or idx > 0:
                         args.seed = int(random.randrange(4294967294))
                 seed_tensor = torch.tensor(args.seed, dtype=torch.int64, device="cuda")
                 dist.broadcast(seed_tensor, src=0)
