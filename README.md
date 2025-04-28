@@ -9,7 +9,7 @@
 - Friendlier filenames with date, seed, cfg, steps, and other details in front.
 
 ## Additional changes from chaojie's fork (https://github.com/SkyworkAI/SkyReels-V2/pull/12):
-- Prompt travel, allow multiple text strings in the --prompt parameter to guide the video differently each chunk of base_num_frames.
+- Prompt travel / multiple prompts, allow multiple text strings in the --prompt parameter to guide the video differently each chunk of base_num_frames.
 - Video input via --video parameter, allow continuing/extending from a video.
 - Partially complete videos will be output as each chunk of base_num_frames completes.  In combination with the --video paramater, this lets you effectively resume from a previous render as well as abort mid-render if the videos take a turn you don't like.  Extremely useful for saving time and "watching" as the renders complete rather than committing the full time.
 
