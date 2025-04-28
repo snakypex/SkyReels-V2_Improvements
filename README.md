@@ -13,6 +13,58 @@
 - Video input via --video parameter, allow continuing/extending from a video.
 - Partially complete videos will be output as each chunk of base_num_frames completes.  In combination with the --video paramater, this lets you effectively resume from a previous render as well as abort mid-render if the videos take a turn you don't like.  Extremely useful for saving time and "watching" as the renders complete rather than committing the full time.
 
+Example prompts below.  If you run into memory/vram issues, you can reduce the base_num_frames while still having the same higher number on num_frames.  The point of the DF model is that now the whole video doesn't have to fit in VRAM and can be done in chunks.
+
+Multi-GPU with video input and prompt travel, batch of 10, preserving aspect ratio. 
+Change --video "video.mp4" to --image "image.jpg" if you want to load a starting image instead.
+```
+model_id=Skywork/SkyReels-V2-DF-14B-540P
+gpu_count=2
+torchrun --nproc_per_node=${gpu_count} generate_video_df.py \
+  --model_id ${model_id} \
+  --resolution 540P \
+  --ar_step 0 \
+  --base_num_frames 97 \
+  --num_frames 257 \
+  --overlap_history 17 \
+  --inference_steps 50 \
+  --guidance_scale 6 \
+  --batch_size 10 \
+  --preserve_image_aspect_ratio \
+  --video "video.mp4" \
+  --prompt "The first thing he does" \
+  "The second thing he does." \
+  "The third thing he does." \
+  --negative_prompt "Bright tones, overexposed, static, blurred details, subtitles, style, works, paintings, images, static, overall gray, worst quality, low quality, JPEG compression residue, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn faces, deformed, disfigured, misshapen limbs, fused fingers, still picture, messy background, three legs, many people in the background, walking backwards" \
+  --addnoise_condition 20 \
+  --use_usp \
+  --offload
+```
+
+Single GPU with video input and prompt travel, batch of 10, preserving aspect ratio. 
+Change --video "video.mp4" to --image "image.jpg" if you want to load a starting image instead.
+```
+model_id=Skywork/SkyReels-V2-DF-14B-540P
+python3 generate_video_df.py \
+  --model_id ${model_id} \
+  --resolution 540P \
+  --ar_step 0 \
+  --base_num_frames 97 \
+  --num_frames 257 \
+  --overlap_history 17 \
+  --inference_steps 50 \
+  --guidance_scale 6 \
+  --batch_size 10 \
+  --preserve_image_aspect_ratio \
+  --video "video.mp4" \
+  --prompt "The first thing he does" \
+  "The second thing he does." \
+  "The third thing he does." \
+  --negative_prompt "Bright tones, overexposed, static, blurred details, subtitles, style, works, paintings, images, static, overall gray, worst quality, low quality, JPEG compression residue, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn faces, deformed, disfigured, misshapen limbs, fused fingers, still picture, messy background, three legs, many people in the background, walking backwards" \
+  --addnoise_condition 20 \
+  --offload
+```
+
 Easy install instructions for those using Runpod like me:
 ```
 #create once on new pod
@@ -35,54 +87,6 @@ export TZ=America/Los_Angeles
 source /workspace/venv/bin/activate
 cd /workspace/SkyReels-V2
 ```
-
-Example prompts below.  If you run into memory/vram issues, you can reduce the base_num_frames while still having the same higher number on num_frames.  The point of the DF model is that now the whole video doesn't have to fit in VRAM and can be done in chunks.
-
-Example prompt (multi-GPU):
-```
-model_id=Skywork/SkyReels-V2-DF-14B-540P
-gpu_count=2
-torchrun --nproc_per_node=${gpu_count} generate_video_df.py \
-  --model_id ${model_id} \
-  --resolution 540P \
-  --ar_step 0 \
-  --base_num_frames 97 \
-  --num_frames 257 \
-  --overlap_history 17 \
-  --inference_steps 50 \
-  --guidance_scale 6 \
-  --batch_size 10 \
-  --preserve_image_aspect_ratio \
-  --image "image.jpg" \
-  --prompt "" \
-  --negative_prompt "Bright tones, overexposed, static, blurred details, subtitles, style, works, paintings, images, static, overall gray, worst quality, low quality, JPEG compression residue, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn faces, deformed, disfigured, misshapen limbs, fused fingers, still picture, messy background, three legs, many people in the background, walking backwards" \
-  --addnoise_condition 20 \
-  --use_usp \
-  --offload
-```
-
-Single GPU:
-```
-model_id=Skywork/SkyReels-V2-DF-14B-540P
-python3 generate_video_df.py \
-  --model_id ${model_id} \
-  --resolution 540P \
-  --ar_step 0 \
-  --base_num_frames 97 \
-  --num_frames 257 \
-  --overlap_history 17 \
-  --inference_steps 50 \
-  --guidance_scale 6 \
-  --batch_size 10 \
-  --preserve_image_aspect_ratio \
-  --image "image.jpg" \
-  --prompt "" \
-  --negative_prompt "Bright tones, overexposed, static, blurred details, subtitles, style, works, paintings, images, static, overall gray, worst quality, low quality, JPEG compression residue, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn faces, deformed, disfigured, misshapen limbs, fused fingers, still picture, messy background, three legs, many people in the background, walking backwards" \
-  --addnoise_condition 20 \
-  --offload
-```
-
-Change "DF" to "I2V' or "T2V" accordingly if you don't want to use the infinite length version of the model.
 
 <hr>
 <p align="center">
