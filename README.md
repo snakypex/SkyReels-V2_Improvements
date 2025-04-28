@@ -65,7 +65,7 @@ python3 generate_video_df.py \
   --offload
 ```
 
-Easy install instructions for those using Runpod like me:
+Easy install instructions for those like me using Runpod for H100 and multi-gpu:
 ```
 #create once on new pod
 export HF_HOME=/workspace/
