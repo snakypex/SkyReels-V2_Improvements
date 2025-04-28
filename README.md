@@ -25,7 +25,7 @@ torchrun --nproc_per_node=${gpu_count} generate_video_df.py \
   --resolution 540P \
   --ar_step 0 \
   --base_num_frames 97 \
-  --num_frames 257 \
+  --num_frames 289 \
   --overlap_history 17 \
   --inference_steps 50 \
   --guidance_scale 6 \
@@ -37,6 +37,8 @@ torchrun --nproc_per_node=${gpu_count} generate_video_df.py \
   "The third thing he does." \
   --negative_prompt "Bright tones, overexposed, static, blurred details, subtitles, style, works, paintings, images, static, overall gray, worst quality, low quality, JPEG compression residue, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn faces, deformed, disfigured, misshapen limbs, fused fingers, still picture, messy background, three legs, many people in the background, walking backwards" \
   --addnoise_condition 20 \
+  --use_ret_steps \
+  --teacache_thresh 0.0 \
   --use_usp \
   --offload
 ```
@@ -50,7 +52,7 @@ python3 generate_video_df.py \
   --resolution 540P \
   --ar_step 0 \
   --base_num_frames 97 \
-  --num_frames 257 \
+  --num_frames 289 \
   --overlap_history 17 \
   --inference_steps 50 \
   --guidance_scale 6 \
@@ -62,6 +64,8 @@ python3 generate_video_df.py \
   "The third thing he does." \
   --negative_prompt "Bright tones, overexposed, static, blurred details, subtitles, style, works, paintings, images, static, overall gray, worst quality, low quality, JPEG compression residue, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn faces, deformed, disfigured, misshapen limbs, fused fingers, still picture, messy background, three legs, many people in the background, walking backwards" \
   --addnoise_condition 20 \
+  --use_ret_steps \
+  --teacache_thresh 0.0 \
   --offload
 ```
 
