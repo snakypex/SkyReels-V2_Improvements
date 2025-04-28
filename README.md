@@ -83,8 +83,8 @@ pip install torch==2.5.1
 pip install --upgrade wheel setuptools
 pip install packaging
 pip install -r requirements.txt --no-build-isolation
-deactivate
-
+```
+```
 #always run at the start to use persisting drive
 export HF_HOME=/workspace/
 export TZ=America/Los_Angeles
