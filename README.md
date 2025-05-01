@@ -1,17 +1,17 @@
 ## Changes from pftq:
-- Added seed synchronization code to allow random seed with multi-GPU (https://github.com/SkyworkAI/SkyReels-V2/issues/24).
-- Reduced 20-min+ load time on multi-GPU to ~8min by fixing contention (all GPUs loading models at once). Indirectly also solved CPU RAM spike during multi-GPU (>200GB on 4 GPUs) (https://github.com/SkyworkAI/SkyReels-V2/issues/28).
-- Fixed CuSolver error that occasionally comes up in multi-GPU by presetting linear algebra library (https://github.com/SkyworkAI/SkyReels-V2/issues/37).
-- Added batch_size parameter to allow multiple videos to generate without reloading the model, which takes about 20 min on multi-gpu so this saves a lot of time.
-- Added preserve_image_aspect_ratio parameter to allow preserving original image aspect ratio.
+- **Added seed synchronization code to allow random seed with multi-GPU** (https://github.com/SkyworkAI/SkyReels-V2/issues/24).
+- **Reduced 20-min+ load time on multi-GPU to ~8min** by fixing contention (all GPUs loading models at once). Indirectly also solved CPU RAM spike during multi-GPU (>200GB on 4 GPUs) (https://github.com/SkyworkAI/SkyReels-V2/issues/28).
+- **Fixed CuSolver error** that occasionally comes up in multi-GPU by presetting linear algebra library (https://github.com/SkyworkAI/SkyReels-V2/issues/37).
+- **Added batch_size** parameter to allow multiple videos to generate without reloading the model, which takes about 20 min on multi-gpu so this saves a lot of time.
+- **Added preserve_image_aspect_ratio** parameter to allow preserving original image aspect ratio.
 - Fixed DF script not resize-cropping the image (I2V script does it but DF is missing the code).
 - Exposed negative_prompt to allow that to be changed/overwritten.
 - Friendlier filenames with date, seed, cfg, steps, and other details in front.
 
 ## Additional changes from chaojie's fork (https://github.com/SkyworkAI/SkyReels-V2/pull/12):
-- Prompt travel / multiple prompts, allow multiple text strings in the --prompt parameter to guide the video differently each chunk of base_num_frames.
-- Video input via --video parameter, allow continuing/extending from a video.
-- Partially complete videos will be output as each chunk of base_num_frames completes.  In combination with the --video paramater, this lets you effectively resume from a previous render as well as abort mid-render if the videos take a turn you don't like.  Extremely useful for saving time and "watching" as the renders complete rather than committing the full time.
+- **Multiple prompts**, allow multiple text strings in the --prompt parameter to guide the video differently each chunk of base_num_frames.
+- **Video input** via --video parameter, allow continuing/extending from a video.
+- **Partially complete videos saved** as each chunk of base_num_frames completes.  In combination with the --video parameter, this lets you effectively resume from a previous render as well as abort mid-render if the videos take a turn you don't like.  Extremely useful for saving time and "watching" as the renders complete rather than committing the full time.
 
 Example prompts below.  If you run into memory/vram issues, you can reduce the base_num_frames while still having the same higher number on num_frames.  The point of the DF model is that now the whole video doesn't have to fit in VRAM and can be done in chunks.
 
