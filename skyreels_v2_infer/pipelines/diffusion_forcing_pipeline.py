@@ -257,7 +257,7 @@ class DiffusionForcingPipeline:
 
             update_mask.append(
                 (new_row != pre_row) & (new_row != num_iterations)
-            )  # False: no need to update, True: need to update
+            )  # False: no need to update， True: need to update
             step_index.append(new_row)
             step_matrix.append(step_template[new_row])
             pre_row = new_row
@@ -340,6 +340,7 @@ class DiffusionForcingPipeline:
         else:
             prompt_embeds_list.append(self.text_encoder.encode(prompt).to(self.transformer.dtype))
         prompt_embeds = prompt_embeds_list[0]
+        prompt_readable = ""
         
         if self.do_classifier_free_guidance:
             negative_prompt_embeds = self.text_encoder.encode(negative_prompt).to(self.transformer.dtype)
@@ -452,7 +453,9 @@ class DiffusionForcingPipeline:
                         prompt_embeds = prompt_embeds_list[i_n_iter]
                 if local_rank == 0:
                     partnum = i_n_iter + 1
-                    print(f"Generating part {partnum} of {n_iter}: "+prompt[i_n_iter]) # 20250425 pftq
+                    if len(prompt) > i_n_iter:
+                        prompt_readable = prompt[i_n_iter]
+                    print(f"Generating part {partnum} of {n_iter}: "+prompt_readable) # 20250425 pftq
                 if output_video is not None:  # i_n_iter !=0
             
                     prefix_video = output_video[:, -overlap_history:].to(prompt_embeds.device)
