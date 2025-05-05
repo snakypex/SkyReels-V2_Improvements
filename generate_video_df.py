@@ -284,9 +284,9 @@ if __name__ == "__main__":
             gpucount = "_"+str(dist.get_world_size())+"xGPU"
         prompt_summary = ""
         if type(args.prompt) is list:
-            prompt_summary = args.prompt[0][:100].replace('/','')
+            prompt_summary = args.prompt[0][:10].replace('/','')
         else:
-            prompt_summary = args.prompt[:100].replace('/','')
+            prompt_summary = args.prompt[:10].replace('/','')
         video_out_file = f"{current_time}_skyreels2df_{args.resolution}-{args.num_frames}f_cfg{args.guidance_scale}_steps{args.inference_steps}_seed{args.seed}{gpucount}_{prompt_summary}_{idx}.mp4" 
         
         with torch.cuda.amp.autocast(dtype=pipe.transformer.dtype), torch.no_grad():
