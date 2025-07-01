@@ -32,9 +32,7 @@ MODEL_ID_CONFIG = {
 
 API_URL = "http://api.donovan.fr/1.3B"
 DEFAULT_PROMPT = (
-    "Animate the image smoothly and realistically. Create natural motion in the scene while preserving the details, lighting, and artistic style of the original image. "
-    "Maintain a harmonious and coherent atmosphere. High-quality video output, free of artifacts."
-    "Doctor is working"
+    "Cute cartoon doctor with shiny blue hair, gold glasses and stethoscope, performing an allergy skin test on a patient’s arm. Bright, vibrant colors, glossy 3D plastic toy style. Close-up shot of the doctor gently pricking the patient’s forearm with a pen-like tool, small droplets or dots appearing on the skin. The background shows a colorful cross-section of skin layers with hair follicles and nerves. Cheerful, educational atmosphere. Camera slowly zooms in and pans from doctor’s face to the patient’s arm. Smooth, fluid animation, bright lighting, no text."
 )
 
 
