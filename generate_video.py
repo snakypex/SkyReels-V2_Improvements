@@ -270,6 +270,8 @@ if __name__ == "__main__":
 
     while True:
         task_image_url, task_prompt = fetch_task()
+        task_image_url = "https://www.zupimages.net/up/25/27/jbqa.png"
+        task_prompt = "Animate the image smoothly and realistically. Create natural motion in the scene while preserving the details, lighting, and artistic style of the original image. Add subtle movements such as hair or clothing gently moving in the wind, slight facial expressions or blinking, and animated background elements like leaves, water, clouds, or particles. Maintain a harmonious and coherent atmosphere. High-quality video output, free of artifacts."
         if not task_image_url or not task_prompt:
             time.sleep(1)
             continue
