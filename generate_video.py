@@ -33,8 +33,8 @@ MODEL_ID_CONFIG = {
 API_URL = "http://api.donovan.fr/1.3B"
 DEFAULT_PROMPT = (
     "Animate the image smoothly and realistically. Create natural motion in the scene while preserving the details, lighting, and artistic style of the original image. "
-    "Add subtle movements such as hair or clothing gently moving in the wind, slight facial expressions or blinking, and animated background elements like leaves, water, clouds, or particles. "
     "Maintain a harmonious and coherent atmosphere. High-quality video output, free of artifacts."
+    "Doctor is working"
 )
 
 
