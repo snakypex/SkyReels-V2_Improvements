@@ -18,6 +18,14 @@ from skyreels_v2_infer.pipelines import PromptEnhancer
 from skyreels_v2_infer.pipelines import resizecrop
 from skyreels_v2_infer.pipelines import Text2VideoPipeline
 
+# force des algos stables au détriment de la vitesse brute
+torch.backends.cudnn.benchmark = False
+torch.backends.cudnn.deterministic = True
+
+# interdire l’usage de TF32 (Tensor Cores) pour plus de précision
+torch.backends.cuda.matmul.allow_tf32 = False
+torch.backends.cudnn.allow_tf32 = False
+
 MODEL_ID_CONFIG = {
     "text2video": [
         "Skywork/SkyReels-V2-T2V-14B-540P",
@@ -189,6 +197,10 @@ if __name__ == "__main__":
     torch.backends.cuda.preferred_linalg_library("default")  # or try "magma" if available
 
     def generate_once(img, p_text):
+        torch.cuda.synchronize()
+        torch.cuda.empty_cache()
+        if args.teacache:
+            pipe.transformer.teacache.clear()
         for idx in range(args.batch_size):
             if local_rank == 0:
                 print(f"Generating video {idx+1} of {args.batch_size}")
