@@ -116,6 +116,9 @@ if __name__ == "__main__":
     else:
         raise ValueError(f"Invalid resolution: {args.resolution}")
 
+    # juste après la section resolution
+    orig_width, orig_height = width, height
+
     #image = load_image(args.image).convert("RGB") if args.image else None
 
         
@@ -196,7 +199,7 @@ if __name__ == "__main__":
 
     torch.backends.cuda.preferred_linalg_library("default")  # or try "magma" if available
 
-    def generate_once(img, p_text):
+    def generate_once(img, p_text, width, height):
         torch.cuda.synchronize()
         torch.cuda.empty_cache()
         if args.teacache:
@@ -286,29 +289,30 @@ if __name__ == "__main__":
 
         try:
             img = load_image(task_image_url).convert("RGB")
+    
+            # pour chaque itération, on repart des valeurs d'origine
+            w, h = orig_width, orig_height
+    
             if args.preserve_image_aspect_ratio:
-                img_width, img_height = img.size
-                if img_height > img_width:
-                    height, width = width, height
-                    width = int(height / img_height * img_width)
-                else:
-                    height = int(width / img_width * img_height)
-
-                divisibility = 16
-                if width % divisibility != 0:
-                    width = width - (width % divisibility)
-                if height % divisibility != 0:
-                    height = height - (height % divisibility)
-
-                img = resizecrop(img, height, width)
+                img_w, img_h = img.size
+                if img_h > img_w:
+                    # swap local
+                    h, w = w, h
+                # recalc local en gardant aspect
+                w = int(h / img_h * img_w)
+                # assurons la divisibilité 16
+                w -= w % 16
+                h -= h % 16
+                img = resizecrop(img, h, w)
             else:
-                image_width, image_height = img.size
-                if image_height > image_width:
-                    height, width = width, height
-                img = resizecrop(img, height, width)
+                img_w, img_h = img.size
+                if img_h > img_w:
+                    # swap local
+                    h, w = w, h
+                img = resizecrop(img, h, w)
         except Exception as e:
             print(f"Failed to load or process image: {e}")
             time.sleep(1)
             continue
 
-        generate_once(img, task_prompt)
+        generate_once(img, task_prompt, w, h)
