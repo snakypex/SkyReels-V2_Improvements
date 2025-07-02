@@ -299,5 +299,4 @@ if __name__ == "__main__":
             time.sleep(1)
             continue
 
-        text = enhance_prompt(task_prompt)
-        generate_once(img, text)
+        generate_once(img, task_prompt)
