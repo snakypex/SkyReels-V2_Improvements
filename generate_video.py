@@ -202,8 +202,6 @@ if __name__ == "__main__":
     def generate_once(img, p_text, width, height):
         torch.cuda.synchronize()
         torch.cuda.empty_cache()
-        if args.teacache:
-            pipe.transformer.teacache.clear()
         for idx in range(args.batch_size):
             if local_rank == 0:
                 print(f"Generating video {idx+1} of {args.batch_size}")
