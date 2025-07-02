@@ -30,7 +30,7 @@ MODEL_ID_CONFIG = {
     ],
 }
 
-API_URL = "http://api.donovan.fr/1.3B"
+API_URL = "https://liroai.com/api/getpendinggeneration"
 DEFAULT_PROMPT = (
     "Cute cartoon doctor with shiny blue hair, gold glasses and stethoscope, performing an allergy skin test on a patient’s arm. Bright, vibrant colors, glossy 3D plastic toy style. Close-up shot of the doctor gently pricking the patient’s forearm with a pen-like tool, small droplets or dots appearing on the skin. The background shows a colorful cross-section of skin layers with hair follicles and nerves. Cheerful, educational atmosphere. Camera slowly zooms in and pans from doctor’s face to the patient’s arm. Smooth, fluid animation, bright lighting, no text."
 )
@@ -261,15 +261,13 @@ if __name__ == "__main__":
             if resp.status_code == 200:
                 data = resp.json()
                 if isinstance(data, dict) and "image" in data and "prompt" in data:
-                    return data["image"], data["prompt"]
+                    return data["image_url"], data["prompt"]
         except Exception as e:
             print(f"API request failed: {e}")
         return None, None
 
     while True:
         task_image_url, task_prompt = fetch_task()
-        task_image_url = "https://www.zupimages.net/up/25/27/jbqa.png"
-        task_prompt = "Animate the image smoothly and realistically. Create natural motion in the scene while preserving the details, lighting, and artistic style of the original image. Add subtle movements such as hair or clothing gently moving in the wind, slight facial expressions or blinking, and animated background elements like leaves, water, clouds, or particles. Maintain a harmonious and coherent atmosphere. High-quality video output, free of artifacts. Medecin is working"
         if not task_image_url or not task_prompt:
             time.sleep(1)
             continue
