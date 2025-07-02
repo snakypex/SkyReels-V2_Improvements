@@ -192,8 +192,6 @@ if __name__ == "__main__":
     torch.backends.cuda.preferred_linalg_library("default")  # or try "magma" if available
 
     def generate_once(img, p_text, width, height):
-        torch.cuda.synchronize()
-        torch.cuda.empty_cache()
         for idx in range(args.batch_size):
             if local_rank == 0:
                 print(f"Generating video {idx+1} of {args.batch_size}")
