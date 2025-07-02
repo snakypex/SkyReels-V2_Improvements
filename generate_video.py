@@ -260,7 +260,7 @@ if __name__ == "__main__":
             resp = requests.get(API_URL, timeout=5)
             if resp.status_code == 200:
                 data = resp.json()
-                if isinstance(data, dict) and "image" in data and "prompt" in data:
+                if isinstance(data, dict) and "image_url" in data and "prompt" in data:
                     return data["image_url"], data["prompt"]
         except Exception as e:
             print(f"API request failed: {e}")
