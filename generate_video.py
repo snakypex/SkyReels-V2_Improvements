@@ -18,14 +18,6 @@ from skyreels_v2_infer.pipelines import PromptEnhancer
 from skyreels_v2_infer.pipelines import resizecrop
 from skyreels_v2_infer.pipelines import Text2VideoPipeline
 
-# force des algos stables au détriment de la vitesse brute
-torch.backends.cudnn.benchmark = False
-torch.backends.cudnn.deterministic = True
-
-# interdire l’usage de TF32 (Tensor Cores) pour plus de précision
-torch.backends.cuda.matmul.allow_tf32 = False
-torch.backends.cudnn.allow_tf32 = False
-
 MODEL_ID_CONFIG = {
     "text2video": [
         "Skywork/SkyReels-V2-T2V-14B-540P",
