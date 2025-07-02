@@ -227,8 +227,8 @@ if __name__ == "__main__":
                 "guidance_scale": args.guidance_scale,
                 "shift": args.shift,
                 "generator": torch.Generator(device="cuda").manual_seed(args.seed),
-                "height": height,
-                "width": width,
+                "height": orig_height,
+                "width": orig_width
             }
 
             if img is not None:
