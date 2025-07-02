@@ -108,9 +108,6 @@ if __name__ == "__main__":
     else:
         raise ValueError(f"Invalid resolution: {args.resolution}")
 
-    # juste après la section resolution
-    orig_width, orig_height = width, height
-
     #image = load_image(args.image).convert("RGB") if args.image else None
 
         
@@ -227,8 +224,8 @@ if __name__ == "__main__":
                 "guidance_scale": args.guidance_scale,
                 "shift": args.shift,
                 "generator": torch.Generator(device="cuda").manual_seed(args.seed),
-                "height": orig_height,
-                "width": orig_width
+                "height": height,
+                "width": width,
             }
 
             if img is not None:
@@ -276,28 +273,36 @@ if __name__ == "__main__":
             continue
 
         try:
-            img = load_image(task_image_url).convert("RGB")
-    
-            # pour chaque itération, on repart des valeurs d'origine
-            w, h = orig_width, orig_height
-    
-            if args.preserve_image_aspect_ratio:
-                img_w, img_h = img.size
-                if img_h > img_w:
-                    # swap local
-                    h, w = w, h
-                # recalc local en gardant aspect
-                w = int(h / img_h * img_w)
-                # assurons la divisibilité 16
-                w -= w % 16
-                h -= h % 16
-                img = resizecrop(img, h, w)
+            if args.resolution == "540P":
+                height = 544
+                width = 960
+            elif args.resolution == "720P":
+                height = 720
+                width = 1280
             else:
-                img_w, img_h = img.size
-                if img_h > img_w:
-                    # swap local
-                    h, w = w, h
-                img = resizecrop(img, h, w)
+                raise ValueError(f"Invalid resolution: {args.resolution}")
+        
+            img = load_image(task_image_url).convert("RGB")
+            if args.preserve_image_aspect_ratio:
+                img_width, img_height = img.size
+                if img_height > img_width:
+                    height, width = width, height
+                    width = int(height / img_height * img_width)
+                else:
+                    height = int(width / img_width * img_height)
+
+                divisibility = 16
+                if width % divisibility != 0:
+                    width = width - (width % divisibility)
+                if height % divisibility != 0:
+                    height = height - (height % divisibility)
+
+                img = resizecrop(img, height, width)
+            else:
+                image_width, image_height = img.size
+                if image_height > image_width:
+                    height, width = width, height
+                img = resizecrop(img, height, width)
         except Exception as e:
             print(f"Failed to load or process image: {e}")
             time.sleep(1)
