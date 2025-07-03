@@ -308,4 +308,5 @@ if __name__ == "__main__":
             time.sleep(1)
             continue
 
-        generate_once(img, task_prompt)
+        prompt_txt = enhance_prompt(task_prompt)
+        generate_once(img, prompt_txt)
