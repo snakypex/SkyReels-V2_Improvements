@@ -99,7 +99,7 @@ if __name__ == "__main__":
             ulysses_degree=dist.get_world_size(),
         )
 
-    image = load_image(args.image).convert("RGB") if args.image else None
+    #image = load_image(args.image).convert("RGB") if args.image else None
     
     negative_prompt = args.negative_prompt  # 20250422 pftq: allow editable negative prompt
 
@@ -119,7 +119,7 @@ if __name__ == "__main__":
     # 20250423 pftq: needs fixing, 20-min load times on multi-GPU caused by contention, DF already reduced down to 12 min roughly the same as single GPU.
     print("Initializing pipe at "+time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime()))
     starttime = time.time()
-    if image is None:
+    if !args.image:
         assert "T2V" in args.model_id, f"check model_id:{args.model_id}"
         print("init text2video pipeline")
         pipe = Text2VideoPipeline(
