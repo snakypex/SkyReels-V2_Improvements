@@ -43,7 +43,7 @@ if __name__ == "__main__":
     parser.add_argument("--model_id", type=str, default="Skywork/SkyReels-V2-T2V-14B-540P")
     parser.add_argument("--resolution", type=str, choices=["540P", "720P"])
     parser.add_argument("--num_frames", type=int, default=97)
-    parser.add_argument("--image", type=str, default=None)
+    parser.add_argument("--image", type=str, default="")
     parser.add_argument("--guidance_scale", type=float, default=6.0)
     parser.add_argument("--shift", type=float, default=8.0)
     parser.add_argument("--inference_steps", type=int, default=30)
@@ -99,49 +99,7 @@ if __name__ == "__main__":
             ulysses_degree=dist.get_world_size(),
         )
 
-    if args.resolution == "540P":
-        height = 544
-        width = 960
-    elif args.resolution == "720P":
-        height = 720
-        width = 1280
-    else:
-        raise ValueError(f"Invalid resolution: {args.resolution}")
-
     #image = load_image(args.image).convert("RGB") if args.image else None
-
-        
-    #20250422 pftq: Add error handling for image loading, aspect ratio preservation
-    image = None
-    if args.image:  
-        try:
-            image = load_image(args.image).convert("RGB")
-
-            # 20250422 pftq: option to preserve image aspect ratio
-            if args.preserve_image_aspect_ratio:
-                img_width, img_height = image.size
-                if img_height > img_width:
-                    height, width = width, height
-                    width = int(height / img_height * img_width)
-                else:
-                    height = int(width / img_width * img_height)
-
-                divisibility=16
-                if width%divisibility!=0:
-                        width = width - (width%divisibility)
-                if height%divisibility!=0:
-                        height = height - (height%divisibility)
-
-                image = resizecrop(image, height, width)
-            else:
-                image_width, image_height = image.size
-                if image_height > image_width:
-                    height, width = width, height
-                image = resizecrop(image, height, width)
-        except Exception as e:
-            raise ValueError(f"Failed to load or process image: {e}")
-
-    print(f"Rank {local_rank}: {width}x{height} | Image: "+str(image!=None))
     
     negative_prompt = args.negative_prompt  # 20250422 pftq: allow editable negative prompt
 
