@@ -99,7 +99,7 @@ if __name__ == "__main__":
             ulysses_degree=dist.get_world_size(),
         )
 
-    #image = load_image(args.image).convert("RGB") if args.image else None
+    image = load_image(args.image).convert("RGB") if args.image else None
     
     negative_prompt = args.negative_prompt  # 20250422 pftq: allow editable negative prompt
 
