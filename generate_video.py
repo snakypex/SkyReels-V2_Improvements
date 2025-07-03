@@ -146,7 +146,7 @@ if __name__ == "__main__":
 
     torch.backends.cuda.preferred_linalg_library("default")  # or try "magma" if available
 
-    def generate_once(img, p_text, p_guidance):
+    def generate_once(img, p_text, p_guidance, p_steps):
         for idx in range(args.batch_size):
             if local_rank == 0:
                 print(f"Generating video {idx+1} of {args.batch_size}")
@@ -178,7 +178,7 @@ if __name__ == "__main__":
                 "prompt": p_text,
                 "negative_prompt": negative_prompt,
                 "num_frames": args.num_frames,
-                "num_inference_steps": args.inference_steps,
+                "num_inference_steps": p_steps,
                 "guidance_scale": p_guidance,
                 "shift": args.shift,
                 "generator": torch.Generator(device="cuda").manual_seed(args.seed),
@@ -218,14 +218,14 @@ if __name__ == "__main__":
             resp = requests.get(API_URL, timeout=5)
             if resp.status_code == 200:
                 data = resp.json()
-                if isinstance(data, dict) and "image_url" in data and "prompt" in data and "guidance" in data:
-                    return data["image_url"], data["prompt"], data["guidance"]
+                if isinstance(data, dict) and "image_url" in data and "prompt" in data and "guidance" in data and "steps" in data:
+                    return data["image_url"], data["prompt"], data["guidance"], data["steps"]
         except Exception as e:
             print(f"API request failed: {e}")
         return None, None
 
     while True:
-        task_image_url, task_prompt, p_guidance = fetch_task()
+        task_image_url, task_prompt, p_guidance, p_steps = fetch_task()
         if not task_image_url or not task_prompt:
             time.sleep(1)
             continue
@@ -267,4 +267,4 @@ if __name__ == "__main__":
             continue
 
         prompt_txt = enhance_prompt(task_prompt)
-        generate_once(img, prompt_txt, p_guidance)
+        generate_once(img, prompt_txt, p_guidance, p_steps)
