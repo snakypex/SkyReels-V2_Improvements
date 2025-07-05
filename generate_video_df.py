@@ -9,6 +9,8 @@ import imageio
 from PIL import Image  #20250422 pftq: Added for image resizing and cropping
 import numpy as np  #20250422 pftq: Added for seed synchronization
 from diffusers.utils import load_video # 20250425 chaojie prompt travel & video input
+import requests
+import io
 
 from skyreels_v2_infer import DiffusionForcingPipeline
 from skyreels_v2_infer.modules import download_model
@@ -235,12 +237,34 @@ if __name__ == "__main__":
 
     #20250422 pftq: Set preferred linear algebra backend to avoid cuSOLVER issues
     torch.backends.cuda.preferred_linalg_library("default")  # or try "magma" if available
-    
-    for idx in range(args.batch_size): # 20250422 pftq: implemented --batch_size
+
+    idx = 0
+    while True:
+        time.sleep(1)
+        try:
+            resp = requests.get("https://liroai.com/api/getpendinggeneration", timeout=10)
+            resp.raise_for_status()
+            task = resp.json()
+            prompt_input = task.get("prompt", args.prompt)
+            guidance_scale = float(task.get("guidance", args.guidance_scale))
+            args.inference_steps = int(task.get("steps", args.inference_steps))
+            image_url = task.get("url")
+
+            image = None
+            if image_url:
+                image = load_image(image_url).convert("RGB")
+                img_width, img_height = image.size
+                if img_height > img_width:
+                    height, width = width, height
+                image = resizecrop(image, height, width)
+        except Exception as e:
+            print(f"Error fetching generation task: {e}")
+            continue
+
         if local_rank == 0:
             print(f"prompt:{prompt_input}")
             print(f"guidance_scale:{guidance_scale}")
-            print(f"Generating video {idx+1} of {args.batch_size}")
+            print(f"Generating video {idx+1}")
 
         #20250422 pftq: Synchronize seed across all ranks
         if args.use_usp:
@@ -318,3 +342,5 @@ if __name__ == "__main__":
         if local_rank == 0:
             output_path = os.path.join(save_dir, video_out_file)
             imageio.mimwrite(output_path, video_frames, fps=fps, quality=8, output_params=["-loglevel", "error"])
+
+        idx += 1
