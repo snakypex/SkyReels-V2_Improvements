@@ -1,7 +1,6 @@
 import argparse
 import os
 from PIL import Image
-from transformers import pipeline
 import groq
 
 model = AutoModelForVision2Seq.from_pretrained(
@@ -55,9 +54,7 @@ FPS-24, A towering, armored warlord with glowing red eyes and curved horns strid
 
 
 def describe_image(image_path: str) -> str:
-    """Generate a caption for an image using Microsoft Florence 2 Large."""
     image = Image.open(image_path).convert("RGB")
-    # Florence-2 uses vision2seq → prepare pixel values
     inputs = processor(images=image, return_tensors="pt")
 
     out = model.generate(**inputs, max_new_tokens=1024)
