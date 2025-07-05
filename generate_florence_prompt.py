@@ -64,8 +64,8 @@ def describe_image(image_path: str) -> str:
     generated_text = processor.batch_decode(generated_ids, skip_special_tokens=False)[0]
 
     parsed_answer = processor.post_process_generation(generated_text, task="<MORE_DETAILED_CAPTION>", image_size=(image.width, image.height))
-    print(generated_text)
-    return generated_text
+    print(parsed_answer)
+    return parsed_answer
 
 
 def generate_prompt(caption: str, api_key: str) -> str:
