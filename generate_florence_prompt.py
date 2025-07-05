@@ -1,6 +1,6 @@
 import argparse
 from PIL import Image
-from transformers import AutoProcessor, AutoModelForCausalLM 
+from transformers import AutoProcessor, AutoModelForCausalLM
 import groq
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
