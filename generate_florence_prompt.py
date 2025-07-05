@@ -3,7 +3,7 @@ from PIL import Image
 from transformers import AutoModelForVision2Seq, AutoProcessor
 import groq
 
-model = AutoModelForVision2Seq.from_pretrained(
+model = AutoModel.from_pretrained(
     "microsoft/florence-2-large",
     trust_remote_code=True
 )
