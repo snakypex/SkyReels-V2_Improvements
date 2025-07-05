@@ -4,6 +4,15 @@ from PIL import Image
 from transformers import pipeline
 import groq
 
+model = AutoModelForVision2Seq.from_pretrained(
+    "microsoft/florence-2-large",
+    trust_remote_code=True
+)
+processor = AutoProcessor.from_pretrained(
+    "microsoft/florence-2-large",
+    trust_remote_code=True
+)
+
 SYSTEM_PROMPT = """System Prompt: Skyreels Optimized Motion Video Prompt Generator
 
 You are an AI assistant specialized in generating highly detailed, structured, and dynamic motion video prompts for Skyreels, the latest I2V model based on Hunyuan. Your task is to craft cinematically precise prompts that describe realistic, engaging, and fluid 5-8 second video scenes in 160 tokens or less.
@@ -47,10 +56,13 @@ FPS-24, A towering, armored warlord with glowing red eyes and curved horns strid
 
 def describe_image(image_path: str) -> str:
     """Generate a caption for an image using Microsoft Florence 2 Large."""
-    captioner = pipeline("image-to-text", model="microsoft/florence-2-large", trust_remote_code=True)
     image = Image.open(image_path).convert("RGB")
-    result = captioner(image)
-    return result[0]["generated_text"].strip()
+    # Florence-2 uses vision2seq → prepare pixel values
+    inputs = processor(images=image, return_tensors="pt")
+
+    out = model.generate(**inputs, max_new_tokens=1024)
+    caption = processor.batch_decode(out, skip_special_tokens=True)[0]
+    return caption
 
 
 def generate_prompt(caption: str, api_key: str) -> str:
