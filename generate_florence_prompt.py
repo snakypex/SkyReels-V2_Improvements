@@ -47,7 +47,11 @@ FPS-24, A towering, armored warlord with glowing red eyes and curved horns strid
 
 def describe_image(image_path: str) -> str:
     """Generate a caption for an image using Microsoft Florence 2 Large."""
-    captioner = pipeline("image-to-text", model="microsoft/florence-2-large")
+   captioner = pipeline(
+        "image-to-text",
+        model="microsoft/florence-2-large",
+        trust_remote_code=True,
+    )
     image = Image.open(image_path).convert("RGB")
     result = captioner(image)
     return result[0]["generated_text"].strip()
