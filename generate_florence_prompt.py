@@ -1,6 +1,6 @@
 import argparse
 from PIL import Image
-from transformers import AutoModelForVision2Seq, AutoProcessor
+from transformers import AutoProcessor, AutoModelForCausalLM 
 import groq
 
 model = AutoModelForCausalLM.from_pretrained("microsoft/Florence-2-large", torch_dtype=torch_dtype, trust_remote_code=True)
