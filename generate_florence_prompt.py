@@ -1,6 +1,7 @@
 import argparse
 import os
 from PIL import Image
+from transformers import AutoModelForVision2Seq, AutoProcessor
 import groq
 
 model = AutoModelForVision2Seq.from_pretrained(
