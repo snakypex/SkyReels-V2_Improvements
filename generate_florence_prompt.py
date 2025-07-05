@@ -1,3 +1,6 @@
+import requests
+
+import torch
 import argparse
 from PIL import Image
 from transformers import AutoProcessor, AutoModelForCausalLM
