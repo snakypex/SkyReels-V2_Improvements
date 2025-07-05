@@ -62,7 +62,7 @@ def generate_prompt(caption: str, api_key: str) -> str:
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": caption},
         ],
-        max_tokens=200,
+        max_tokens=1000,
     )
     return response.choices[0].message.content.strip()
 
@@ -70,14 +70,11 @@ def generate_prompt(caption: str, api_key: str) -> str:
 def main():
     parser = argparse.ArgumentParser(description="Generate Skyreels prompt from image")
     parser.add_argument("image", help="Path to the input image")
-    parser.add_argument("--api-key", dest="api_key", default=os.getenv("GROQ_API_KEY"), help="Groq API key")
     args = parser.parse_args()
 
-    if not args.api_key:
-        raise ValueError("Groq API key must be provided via --api-key or GROQ_API_KEY env var")
 
     caption = describe_image(args.image)
-    prompt = generate_prompt(caption, args.api_key)
+    prompt = generate_prompt(caption, "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")
     print(prompt)
 
 
