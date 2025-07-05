@@ -54,12 +54,17 @@ FPS-24, A towering, armored warlord with glowing red eyes and curved horns strid
 
 
 def describe_image(image_path: str) -> str:
+    prompt = "<OD>"
+    
     image = Image.open(requests.get(image_path, stream=True).raw).convert("RGB")
     inputs = processor(images=image, return_tensors="pt").to(device)
 
-    out = model.generate(**inputs, max_new_tokens=1024)
-    caption = processor.batch_decode(out, skip_special_tokens=True)[0]
-    return caption
+    generated_ids = model.generate(input_ids=inputs["input_ids"],pixel_values=inputs["pixel_values"],max_new_tokens=1024,num_beams=3,do_sample=False)
+    generated_text = processor.batch_decode(generated_ids, skip_special_tokens=False)[0]
+
+    parsed_answer = processor.post_process_generation(generated_text, task="<OD>", image_size=(image.width, image.height))
+    print(parsed_answer)
+    return parsed_answer
 
 
 def generate_prompt(caption: str, api_key: str) -> str:
