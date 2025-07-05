@@ -3,14 +3,8 @@ from PIL import Image
 from transformers import AutoModelForVision2Seq, AutoProcessor
 import groq
 
-model = AutoModel.from_pretrained(
-    "microsoft/florence-2-large",
-    trust_remote_code=True
-)
-processor = AutoProcessor.from_pretrained(
-    "microsoft/florence-2-large",
-    trust_remote_code=True
-)
+model = AutoModelForCausalLM.from_pretrained("microsoft/Florence-2-large", torch_dtype=torch_dtype, trust_remote_code=True)
+processor = AutoProcessor.from_pretrained("microsoft/Florence-2-large", trust_remote_code=True)
 
 SYSTEM_PROMPT = """System Prompt: Skyreels Optimized Motion Video Prompt Generator
 
