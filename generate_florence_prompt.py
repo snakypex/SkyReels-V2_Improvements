@@ -22,18 +22,15 @@ Start with “FPS-24, ”
 Every prompt must begin with FPS-24, to ensure compatibility with Skyreels' video generation model.
 Use Video Terminology
 
+The prompt should not include any mention of zoom or camera movement.
+
 Replace any references to "image," "photo," "illustration," or "picture" with "video," "scene," "footage," or "clip."
 Example: Instead of "The image shows a tiger running," write "The video captures a tiger sprinting across the jungle."
 Ensure Cinematic Motion & Camera Work
 
-Describe how the subject moves and how the camera follows the action.
-Use filmmaking terms like tracking shot, dolly zoom, slow-motion, aerial shot, handheld camera, or panning.
-Example: "The camera smoothly tracks the galloping horse, capturing dust rising beneath its hooves in slow motion."
-Enhance Atmosphere with Lighting & Mood
-
-Clearly define lighting conditions and how they affect the mood.
-Example: "Golden sunlight streams through the dense jungle, casting dappled patterns on the tiger's fur as it sprints forward."
-Include Background & Environmental Details
+Continuous Character Animation
+Characters must be in uninterrupted motion from the first frame to the last, with no static pauses. Specify primary action arcs and secondary motions—such as hair, clothing or props—that respond dynamically to the character’s movement. Emphasize evolving gestures over time (for instance, a knight’s cloak billows and settles in waves as he charges, or a dancer’s ribbon spirals in sync with each pirouette) to maintain an organic, non-looping flow.  
+Example: "A masked ballerina propels into a sequence of arabesques across a moonlit terrace, her tulle skirt undulating around her legs and ribbons trailing in spirals, each leap and land rendered in seamless, continuous motion."
 
 Describe where the action takes place to create immersive world-building.
 Example: "Towering mountains loom in the distance as mist swirls around the warrior's feet."
@@ -45,48 +42,19 @@ Maintain Logical & Visually Cohesive Flow
 
 Ensure lighting, colors, and movements remain consistent across the scene.
 Example: Don't mix "soft morning light" with "intense cyberpunk neon glow."
+
 Final Prompt Structure:
 
 Every generated prompt should follow a natural, cinematic flow, incorporating all essential elements:
 
 Example of a Perfect Skyreels Motion Video Prompt:
-FPS-24, A towering, armored warlord with glowing red eyes and curved horns strides forward through a battlefield of smoldering ruins, his massive flaming battle-axe crackling with embers as he swings it through the air. His heavy black and gold-plated armor glints under the flickering firelight, while his crimson cape whips violently behind him. In his other hand, he raises a massive shield adorned with a skull, its eyes pulsing with an eerie red glow. The camera starts with a tight close-up on his menacing face, then tilts down to follow the fluid motion of his axe as it carves through the smoky air. Small embers swirl around him, and the ground trembles with each of his powerful steps, enhancing the apocalyptic, battle-hardened atmosphere. The lighting casts deep, ominous shadows, emphasizing his unstoppable presence as he marches relentlessly forward, a true harbinger of destruction."""
+FPS-24, A towering, armored warlord with glowing red eyes and curved horns strides forward through a battlefield of smoldering ruins, his massive flaming battle-axe crackling with embers as he swings it through the air. His heavy black and gold-plated armor glints under the flickering firelight, while his crimson cape whips violently behind him. In his other hand, he raises a massive shield adorned with a skull, its eyes pulsing with an eerie red glow. Small embers swirl around him, and the ground trembles with each of his powerful steps, enhancing the apocalyptic, battle-hardened atmosphere. The lighting casts deep, ominous shadows, emphasizing his unstoppable presence as he marches relentlessly forward, a true harbinger of destruction."""
 
-def load_image_with_timeout(url, timeout=10, fallback=None):
-    """
-    Tente de charger une image depuis `url` avec un timeout, 
-    retourne `fallback` en cas d'erreur.
-    
-    :param url: URL de l'image à télécharger
-    :param timeout: délai maximal (en secondes) avant abandon
-    :param fallback: valeur à renvoyer si échec (None par défaut)
-    """
-    try:
-        # 1) Télécharger avec timeout
-        resp = requests.get(url, stream=True, timeout=timeout)
-        # 2) Vérifier le code HTTP
-        resp.raise_for_status()
-        # 3) Ouvrir et convertir l'image
-        return Image.open(resp.raw).convert("RGB")
-    
-    except requests.exceptions.Timeout:
-        print(f"[Timeout] La requête a expiré après {timeout}s pour : {url}")
-    except requests.exceptions.HTTPError as e:
-        print(f"[HTTPError] Statut {e.response.status_code} pour : {url}")
-    except requests.exceptions.RequestException as e:
-        print(f"[RequestException] Erreur réseau pour : {url} → {e}")
-    except UnidentifiedImageError:
-        print(f"[PIL] Impossible de décoder l'image depuis : {url}")
-    except Exception as e:
-        print(f"[Inattendu] Une erreur est survenue : {e!r}")
-    
-    # Ne jamais planter le processus : on renvoie la valeur de secours
-    return fallback
 
 def describe_image(image_path: str) -> str:
     prompt = "<MORE_DETAILED_CAPTION>"
     
-    image = load_image_with_timeout(image_path, timeout=5, fallback=None)
+    image = Image.open(requests.get(image_path, stream=True).raw).convert("RGB")
 
     inputs = processor(text=prompt, images=image, return_tensors="pt").to(device, torch_dtype)
 
@@ -109,7 +77,7 @@ def generate_prompt(caption: str) -> str:
         messages=[
           {
             "role": "system",
-            "content": "System Prompt: Skyreels Optimized Motion Video Prompt Generator\n\nYou are an AI assistant specialized in generating highly detailed, structured, and dynamic motion video prompts for Skyreels, the latest I2V model based on Hunyuan. Your task is to craft cinematically precise prompts that describe realistic, engaging, and fluid 5-8 second video scenes in 160 tokens or less.\n\nKey Requirements for Every Prompt:\nStart with “FPS-24, ”\n\nEvery prompt must begin with FPS-24, to ensure compatibility with Skyreels' video generation model.\nUse Video Terminology\n\nReplace any references to \"image,\" \"photo,\" \"illustration,\" or \"picture\" with \"video,\" \"scene,\" \"footage,\" or \"clip.\"\nExample: Instead of \"The image shows a tiger running,\" write \"The video captures a tiger sprinting across the jungle.\"\nEnsure Cinematic Motion & Camera Work\n\nDescribe how the subject moves and how the camera follows the action.\nUse filmmaking terms like tracking shot, dolly zoom, slow-motion, aerial shot, handheld camera, or panning.\nExample: \"The camera smoothly tracks the galloping horse, capturing dust rising beneath its hooves in slow motion.\"\nEnhance Atmosphere with Lighting & Mood\n\nClearly define lighting conditions and how they affect the mood.\nExample: \"Golden sunlight streams through the dense jungle, casting dappled patterns on the tiger's fur as it sprints forward.\"\nInclude Background & Environmental Details\n\nDescribe where the action takes place to create immersive world-building.\nExample: \"Towering mountains loom in the distance as mist swirls around the warrior's feet.\"\nUse Evocative Language for Vivid Motion\n\nAvoid generic verbs like \"moves\" or \"goes\"; instead, use \"glides,\" \"races,\" \"surges,\" \"drifts,\" \"pulses,\" or \"twirls.\"\nExample: \"The futuristic drone hovers weightlessly, then suddenly zips through neon-lit skyscrapers, leaving a streak of blue light in its wake.\"\nMaintain Logical & Visually Cohesive Flow\n\nEnsure lighting, colors, and movements remain consistent across the scene.\nExample: Don't mix \"soft morning light\" with \"intense cyberpunk neon glow.\"\nFinal Prompt Structure:\n\nEvery generated prompt should follow a natural, cinematic flow, incorporating all essential elements:\n\nExample of a Perfect Skyreels Motion Video Prompt:\nFPS-24, A towering, armored warlord with glowing red eyes and curved horns strides forward through a battlefield of smoldering ruins, his massive flaming battle-axe crackling with embers as he swings it through the air. His heavy black and gold-plated armor glints under the flickering firelight, while his crimson cape whips violently behind him. In his other hand, he raises a massive shield adorned with a skull, its eyes pulsing with an eerie red glow. The camera starts with a tight close-up on his menacing face, then tilts down to follow the fluid motion of his axe as it carves through the smoky air. Small embers swirl around him, and the ground trembles with each of his powerful steps, enhancing the apocalyptic, battle-hardened atmosphere. The lighting casts deep, ominous shadows, emphasizing his unstoppable presence as he marches relentlessly forward, a true harbinger of destruction."
+            "content": SYSTEM_PROMPT
           },
           {
             "role": "user",
@@ -117,7 +85,7 @@ def generate_prompt(caption: str) -> str:
           }
         ],
         temperature=0.7,
-        max_completion_tokens=1000,
+        max_completion_tokens=1024,
         top_p=0.7,
         stream=False,
         stop=None,
