@@ -89,7 +89,7 @@ def generate_prompt(caption: str) -> str:
         temperature=0.7,
         max_completion_tokens=1000,
         top_p=0.7,
-        stream=True,
+        stream=False,
         stop=None,
     )
     print(completion.choices[0].message.content)
