@@ -80,7 +80,7 @@ def generate_prompt(caption: str) -> str:
           },
           {
             "role": "user",
-            "content": str
+            "content": caption
           }
         ],
         temperature=0.7,
