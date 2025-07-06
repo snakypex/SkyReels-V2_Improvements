@@ -52,11 +52,41 @@ Every generated prompt should follow a natural, cinematic flow, incorporating al
 Example of a Perfect Skyreels Motion Video Prompt:
 FPS-24, A towering, armored warlord with glowing red eyes and curved horns strides forward through a battlefield of smoldering ruins, his massive flaming battle-axe crackling with embers as he swings it through the air. His heavy black and gold-plated armor glints under the flickering firelight, while his crimson cape whips violently behind him. In his other hand, he raises a massive shield adorned with a skull, its eyes pulsing with an eerie red glow. The camera starts with a tight close-up on his menacing face, then tilts down to follow the fluid motion of his axe as it carves through the smoky air. Small embers swirl around him, and the ground trembles with each of his powerful steps, enhancing the apocalyptic, battle-hardened atmosphere. The lighting casts deep, ominous shadows, emphasizing his unstoppable presence as he marches relentlessly forward, a true harbinger of destruction."""
 
+def load_image_with_timeout(url, timeout=10, fallback=None):
+    """
+    Tente de charger une image depuis `url` avec un timeout, 
+    retourne `fallback` en cas d'erreur.
+    
+    :param url: URL de l'image à télécharger
+    :param timeout: délai maximal (en secondes) avant abandon
+    :param fallback: valeur à renvoyer si échec (None par défaut)
+    """
+    try:
+        # 1) Télécharger avec timeout
+        resp = requests.get(url, stream=True, timeout=timeout)
+        # 2) Vérifier le code HTTP
+        resp.raise_for_status()
+        # 3) Ouvrir et convertir l'image
+        return Image.open(resp.raw).convert("RGB")
+    
+    except requests.exceptions.Timeout:
+        print(f"[Timeout] La requête a expiré après {timeout}s pour : {url}")
+    except requests.exceptions.HTTPError as e:
+        print(f"[HTTPError] Statut {e.response.status_code} pour : {url}")
+    except requests.exceptions.RequestException as e:
+        print(f"[RequestException] Erreur réseau pour : {url} → {e}")
+    except UnidentifiedImageError:
+        print(f"[PIL] Impossible de décoder l'image depuis : {url}")
+    except Exception as e:
+        print(f"[Inattendu] Une erreur est survenue : {e!r}")
+    
+    # Ne jamais planter le processus : on renvoie la valeur de secours
+    return fallback
 
 def describe_image(image_path: str) -> str:
     prompt = "<MORE_DETAILED_CAPTION>"
     
-    image = Image.open(requests.get(image_path, stream=True).raw).convert("RGB")
+    image = load_image_with_timeout(image_path, timeout=5, fallback=None)
 
     inputs = processor(text=prompt, images=image, return_tensors="pt").to(device, torch_dtype)
 
