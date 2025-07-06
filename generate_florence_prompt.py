@@ -65,7 +65,7 @@ def describe_image(image_path: str) -> str:
 
     parsed_answer = processor.post_process_generation(generated_text, task="<MORE_DETAILED_CAPTION>", image_size=(image.width, image.height))
 
-    answer = raw["<MORE_DETAILED_CAPTION>"]
+    answer = parsed_answer["<MORE_DETAILED_CAPTION>"]
     
     print(answer)
     return answer
