@@ -4,7 +4,7 @@ import torch
 import argparse
 from PIL import Image
 from transformers import AutoProcessor, AutoModelForCausalLM
-import groq
+from groq import Groq
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
