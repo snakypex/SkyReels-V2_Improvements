@@ -68,9 +68,9 @@ def describe_image(image_path: str) -> str:
     return parsed_answer
 
 
-def generate_prompt(caption: str, api_key: str) -> str:
+def generate_prompt(caption: str) -> str:
     """Call Groq API with the caption as user prompt and return the response."""
-    client = Groq(api_key=api_key)
+    client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
     completion = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[
@@ -80,7 +80,7 @@ def generate_prompt(caption: str, api_key: str) -> str:
           },
           {
             "role": "user",
-            "content": "The image is a digital illustration of a pink stomach with the words \"Sweet Home\" written above it. The stomach is standing in front of a red door with a yellow handle. Next to the stomach, there is a small yellow character with a blue suitcase. The character has a big smile on its face and appears to be happy. The background is a light orange color. The overall theme of the image is cute and playful."
+            "content": str
           }
         ],
         temperature=0.7,
@@ -99,7 +99,7 @@ def main():
 
 
     caption = describe_image(args.image)
-    prompt = generate_prompt(caption, "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")
+    prompt = generate_prompt(caption)
     print(prompt)
 
 
