@@ -64,8 +64,11 @@ def describe_image(image_path: str) -> str:
     generated_text = processor.batch_decode(generated_ids, skip_special_tokens=False)[0]
 
     parsed_answer = processor.post_process_generation(generated_text, task="<MORE_DETAILED_CAPTION>", image_size=(image.width, image.height))
-    print(parsed_answer)
-    return parsed_answer
+
+    answer = raw["<MORE_DETAILED_CAPTION>"]
+    
+    print(answer)
+    return answer
 
 
 def generate_prompt(caption: str) -> str:
