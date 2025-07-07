@@ -253,7 +253,7 @@ if __name__ == "__main__":
             prompt_input = task.get("prompt", args.prompt)
             guidance_scale = float(task.get("guidance", args.guidance_scale))
             inference_steps = int(task.get("steps", args.inference_steps))
-            image_url = task.get("url")
+            image_url = task.get("image_url")
 
             image = None
             if image_url:
