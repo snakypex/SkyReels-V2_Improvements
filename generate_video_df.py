@@ -247,7 +247,7 @@ if __name__ == "__main__":
             prompt_summary = args.prompt[0][:10].replace('/','')
         else:
             prompt_summary = args.prompt[:10].replace('/','')
-        video_out_file = f"liroai-{current_time}_{prompt_summary}_{args.num_frames}f_cfg{args.guidance_scale}_steps{args.inference_steps}_seed{args.seed}.mp4"
+        video_out_file = f"liroai-{current_time}_{prompt_summary}_{args.num_frames}f_cfg{guidance_scale}_steps{inference_steps}_seed{args.seed}.mp4"
 
         
         with torch.cuda.amp.autocast(dtype=pipe.transformer.dtype), torch.no_grad():
