@@ -158,6 +158,7 @@ if __name__ == "__main__":
             task = resp.json()
             prompt_input = task.get("prompt", args.prompt)
             guidance_scale = float(task.get("guidance", args.guidance_scale))
+            shift = float(task.get("shift", args.shift))
             inference_steps = int(task.get("steps", args.inference_steps))
             image_url = task.get("image_url")
         except Exception as e:
