@@ -255,11 +255,27 @@ if __name__ == "__main__":
             inference_steps = int(task.get("steps", args.inference_steps))
             image_url = task.get("image_url")
 
-            image = None
-            if image_url:
-                image = load_image(image_url).convert("RGB")
+            image = load_image(args.image).convert("RGB")
+
+            # 20250422 pftq: option to preserve image aspect ratio
+            if args.preserve_image_aspect_ratio:
                 img_width, img_height = image.size
                 if img_height > img_width:
+                    height, width = width, height
+                    width = int(height / img_height * img_width)
+                else:
+                    height = int(width / img_width * img_height)
+
+                divisibility = 16
+                if width % divisibility != 0:
+                    width = width - (width % divisibility)
+                if height % divisibility != 0:
+                    height = height - (height % divisibility)
+
+                image = resizecrop(image, height, width)
+            else:
+                image_width, image_height = image.size
+                if image_height > image_width:
                     height, width = width, height
                 image = resizecrop(image, height, width)
         except Exception as e:
@@ -317,6 +333,8 @@ if __name__ == "__main__":
             prompt_summary = args.prompt[:10].replace('/', '')
         video_out_file = f"liroai-{current_time}_{prompt_summary}_{args.num_frames}f_cfg{args.guidance_scale}_steps{args.inference_steps}_seed{args.seed}_{idx}.mp4"
 
+        print(f"prompt:{prompt_input}")
+        
         with torch.cuda.amp.autocast(dtype=pipe.transformer.dtype), torch.no_grad():
             video_frames = pipe(
                 prompt=prompt_input,
