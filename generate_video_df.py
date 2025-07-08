@@ -164,7 +164,7 @@ if __name__ == "__main__":
             print(f"Error fetching generation task: {e}")
             continue
 
-        image = load_image(args.image).convert("RGB")
+        image = load_image(image_url).convert("RGB")
 
         # 20250422 pftq: option to preserve image aspect ratio
         if args.preserve_image_aspect_ratio:
