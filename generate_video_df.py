@@ -167,6 +167,15 @@ if __name__ == "__main__":
         image = load_image(image_url).convert("RGB")
 
         # 20250422 pftq: option to preserve image aspect ratio
+        if args.resolution == "540P":
+            height = 544
+            width = 960
+        elif args.resolution == "720P":
+            height = 720
+            width = 1280
+        else:
+            raise ValueError(f"Invalid resolution: {args.resolution}")
+            
         if args.preserve_image_aspect_ratio:
             img_width, img_height = image.size
             if img_height > img_width:
