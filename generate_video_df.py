@@ -38,7 +38,7 @@ if __name__ == "__main__":
     parser.add_argument("--use_usp", action="store_true")
     parser.add_argument("--offload", action="store_true")
     parser.add_argument("--fps", type=int, default=24)
-    parser.add_argument("--seed", type=int, default=-1)
+    parser.add_argument("--seed", type=int, random.randrange(4294967294))
 
     parser.add_argument("--batch_size", type=int, default=1) # 20250422 pftq: Batch functionality to avoid reloading the model each video
     parser.add_argument("--preserve_image_aspect_ratio", action="store_true")  # 20250422 pftq: Avoid resizing
