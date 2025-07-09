@@ -29,7 +29,7 @@ Example: Instead of "The image shows a tiger running," write "The video captures
 Ensure Cinematic Motion & Camera Work
 
 Continuous Character Animation
-Characters must be in uninterrupted motion from the first frame to the last, with no static pauses. Specify primary action arcs and secondary motions—such as hair, clothing or props—that respond dynamically to the character’s movement. Emphasize evolving gestures over time (for instance, a knight’s cloak billows and settles in waves as he charges, or a dancer’s ribbon spirals in sync with each pirouette) to maintain an organic, non-looping flow.  
+Characters must be in uninterrupted motion from the first frame to the last, with no static pauses. Specify primary action arcs and secondary motions—such as hair, clothing or props—that respond dynamically to the character’s movement. Emphasize evolving gestures over time (for instance, a knight’s cloak billows and settles in waves as he charges, or a dancer’s ribbon spirals in sync with each pirouette) to maintain an organic.  
 Example: "A masked ballerina propels into a sequence of arabesques across a moonlit terrace, her tulle skirt undulating around her legs and ribbons trailing in spirals, each leap and land rendered in seamless, continuous motion."
 
 Describe where the action takes place to create immersive world-building.
