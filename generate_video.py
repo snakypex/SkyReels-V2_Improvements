@@ -222,7 +222,7 @@ if __name__ == "__main__":
                     return data["image_url"], data["prompt"], data["guidance"], data["steps"]
         except Exception as e:
             print(f"API request failed: {e}")
-        return None, None
+        return None, None, None, None
 
     while True:
         task_image_url, task_prompt, p_guidance, p_steps = fetch_task()
