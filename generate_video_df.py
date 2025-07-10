@@ -17,6 +17,10 @@ from skyreels_v2_infer.modules import download_model
 from skyreels_v2_infer.pipelines import PromptEnhancer
 from skyreels_v2_infer.pipelines import resizecrop
 
+from huggingface_hub import login
+
+login(os.environ.get("HUGGING_API_KEY"))
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
