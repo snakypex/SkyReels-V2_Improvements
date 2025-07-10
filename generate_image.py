@@ -1,4 +1,5 @@
 import torch
+import os
 from diffusers import AutoPipelineForText2Image
 
 # PEFT 라이브러리 필요 (LoRA 로딩용)
