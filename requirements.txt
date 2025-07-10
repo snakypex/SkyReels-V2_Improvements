@@ -17,3 +17,6 @@ groq
 timm
 sentencepiece
 protobuf
+peft
+decord
+moviepy==1.0.3
