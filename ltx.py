@@ -14,13 +14,13 @@ def round_to_nearest_resolution_acceptable_by_vae(height, width):
     width = width - (width % pipe.vae_spatial_compression_ratio)
     return height, width
 
-image = load_image("https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/diffusers/penguin.png")
+image = load_image("https://i.postimg.cc/TwQV5Ppg/generated-image-2.png")
 video = load_video(export_to_video([image])) # compress the image using video compression as the model was trained on videos
 condition1 = LTXVideoCondition(video=video, frame_index=0)
 
-prompt = "A cute little penguin takes out a book and starts reading it"
+prompt = "FPS-24, A young woman with long blonde hair sits on a bed, her legs spread apart as she faces the camera with a subtle, inviting smile. Her arms rest gently on her thighs, and her gaze is direct, engaging the viewer. The plain white wall behind her provides a clean, minimalist backdrop, allowing her relaxed, natural pose to take center stage. Her hair cascades down her back, framing her calm, serene expression as she embodies comfort and confidence."
 negative_prompt = "worst quality, inconsistent motion, blurry, jittery, distorted"
-expected_height, expected_width = 480, 832
+expected_height, expected_width = 960, 544
 downscale_factor = 2 / 3
 num_frames = 96
 
