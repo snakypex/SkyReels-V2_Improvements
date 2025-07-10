@@ -22,18 +22,6 @@ from huggingface_hub import login
 
 login(os.environ.get("HUGGING_API_KEY"))
 
-MODEL_ID_CONFIG = {
-    "text2video": [
-        "Skywork/SkyReels-V2-T2V-14B-540P",
-        "Skywork/SkyReels-V2-T2V-14B-720P",
-    ],
-    "image2video": [
-        "Skywork/SkyReels-V2-I2V-1.3B-540P",
-        "Skywork/SkyReels-V2-I2V-14B-540P",
-        "Skywork/SkyReels-V2-I2V-14B-720P",
-    ],
-}
-
 API_URL = "https://liroai.com/api/getpendinggeneration"
 DEFAULT_PROMPT = (
     "Cute cartoon doctor with shiny blue hair, gold glasses and stethoscope, performing an allergy skin test on a patient’s arm. Bright, vibrant colors, glossy 3D plastic toy style. Close-up shot of the doctor gently pricking the patient’s forearm with a pen-like tool, small droplets or dots appearing on the skin. The background shows a colorful cross-section of skin layers with hair follicles and nerves. Cheerful, educational atmosphere. Camera slowly zooms in and pans from doctor’s face to the patient’s arm. Smooth, fluid animation, bright lighting, no text."
