@@ -44,8 +44,8 @@ image = pipe(
     negative_prompt=negative_prompt,
     guidance_scale=7.0,
     num_inference_steps=28,
-    width=1024,
-    height=1024,
+    width=544,
+    height=960,
     generator=generator,
 ).images[0]
 
