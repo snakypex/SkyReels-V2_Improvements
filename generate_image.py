@@ -20,6 +20,7 @@ pipe = AutoPipelineForText2Image.from_pretrained(
     "black-forest-labs/FLUX.1-dev", 
     torch_dtype=torch.float16  # bfloat16 대신 float16 사용
 )
+pipe.enable_model_cpu_offload()
 pipe.to(device)
 
 # Uncensored LoRA 로드
