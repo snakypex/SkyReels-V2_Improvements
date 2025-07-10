@@ -6,7 +6,7 @@ from peft import PeftModel, PeftConfig
 
 from huggingface_hub import login
 
-login()
+login(os.environ.get("HUGGING_API_KEY"))
 
 # 기기 설정
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
