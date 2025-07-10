@@ -18,6 +18,10 @@ from skyreels_v2_infer.pipelines import PromptEnhancer
 from skyreels_v2_infer.pipelines import resizecrop
 from skyreels_v2_infer.pipelines import Text2VideoPipeline
 
+from huggingface_hub import login
+
+login(os.environ.get("HUGGING_API_KEY"))
+
 MODEL_ID_CONFIG = {
     "text2video": [
         "Skywork/SkyReels-V2-T2V-14B-540P",
