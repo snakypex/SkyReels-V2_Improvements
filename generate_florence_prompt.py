@@ -108,6 +108,7 @@ def main():
 
             task = resp.json()
             image_url = task.get("image_url")
+            token = task.get("token")
             temperature = float(task.get("temperature"))
         except Exception as e:
             print(f"Error fetching generation task: {e}")
@@ -118,6 +119,7 @@ def main():
             caption = describe_image(image_url)
             prompt = generate_prompt(caption, temperature)
             data = {
+                'token': token,
                 'description': caption,
                 'prompt': prompt
             }
