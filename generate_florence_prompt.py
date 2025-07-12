@@ -123,7 +123,8 @@ def main():
                 'description': caption,
                 'prompt': prompt
             }
-            requests.post("https://liroai.com/api/setpromptdescription", data=data)
+            response = requests.post("https://liroai.com/api/setpromptdescription", data=data)
+            print(response.text)
 
 if __name__ == "__main__":
     main()
