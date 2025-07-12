@@ -100,7 +100,11 @@ def main():
         time.sleep(1)
         try:
             resp = requests.get("https://liroai.com/api/getpendingprompt", timeout=10)
-            resp.raise_for_status()
+
+            if resp.status_code != 200:
+                print(resp.text)
+                continue
+
             task = resp.json()
             image_url = task.get("image_url")
         except Exception as e:
