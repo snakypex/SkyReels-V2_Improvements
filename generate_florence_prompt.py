@@ -115,7 +115,7 @@ def main():
                 'description': caption,
                 'prompt': prompt
             }
-            requests.post(https://liroai.com/api/setpromptdescription, data=data)
+            requests.post("https://liroai.com/api/setpromptdescription", data=data)
 
 if __name__ == "__main__":
     main()
