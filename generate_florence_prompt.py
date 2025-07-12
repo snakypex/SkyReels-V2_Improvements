@@ -108,7 +108,7 @@ def main():
 
             task = resp.json()
             image_url = task.get("image_url")
-            temperature = task.get("temperature")
+            temperature = float(task.get("temperature"))
         except Exception as e:
             print(f"Error fetching generation task: {e}")
             continue
