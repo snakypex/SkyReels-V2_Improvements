@@ -1,5 +1,6 @@
 import requests
 import os
+import time
 import torch
 import argparse
 from PIL import Image
