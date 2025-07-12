@@ -91,18 +91,31 @@ def generate_prompt(caption: str) -> str:
         stop=None,
     )
     print(completion.choices[0].message.content)
+    return completion.choices[0].message.content
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate Skyreels prompt from image")
-    parser.add_argument("image", help="Path to the input image")
-    args = parser.parse_args()
 
+    for True:
+        time.sleep(1)
+        try:
+            resp = requests.get("https://liroai.com/api/getpendingprompt", timeout=10)
+            resp.raise_for_status()
+            task = resp.json()
+            image_url = task.get("image_url")
+        except Exception as e:
+            print(f"Error fetching generation task: {e}")
+            continue
 
-    caption = describe_image(args.image)
-    prompt = generate_prompt(caption)
-    print(prompt)
+        if image_url:
 
+            caption = describe_image(image_url)
+            prompt = generate_prompt(caption)
+            data = {
+                'description': caption,
+                'prompt': prompt
+            }
+            requests.post(https://liroai.com/api/setpromptdescription, data=data)
 
 if __name__ == "__main__":
     main()
