@@ -84,7 +84,7 @@ def generate_prompt(caption: str) -> str:
             "content": caption
           }
         ],
-        temperature=0.7,
+        temperature=temperature,
         max_completion_tokens=1024,
         top_p=0.7,
         stream=False,
@@ -107,6 +107,7 @@ def main():
 
             task = resp.json()
             image_url = task.get("image_url")
+            temperature = task.get("temperature")
         except Exception as e:
             print(f"Error fetching generation task: {e}")
             continue
