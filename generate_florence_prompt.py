@@ -70,7 +70,7 @@ def describe_image(image_path: str) -> str:
     return answer
 
 
-def generate_prompt(caption: str) -> str:
+def generate_prompt(caption: str, temperature: float) -> str:
     """Call Groq API with the caption as user prompt and return the response."""
     client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
     completion = client.chat.completions.create(
@@ -116,7 +116,7 @@ def main():
         if image_url:
 
             caption = describe_image(image_url)
-            prompt = generate_prompt(caption)
+            prompt = generate_prompt(caption, temperature)
             data = {
                 'description': caption,
                 'prompt': prompt
