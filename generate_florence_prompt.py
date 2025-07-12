@@ -96,7 +96,7 @@ def generate_prompt(caption: str) -> str:
 
 def main():
 
-    for True:
+    while True:
         time.sleep(1)
         try:
             resp = requests.get("https://liroai.com/api/getpendingprompt", timeout=10)
