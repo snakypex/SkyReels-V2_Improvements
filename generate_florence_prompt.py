@@ -72,6 +72,7 @@ def main():
             token = task.get("token")
             temperature = float(task.get("temperature"))
             system_prompt = task.get("system_prompt")
+            print(system_prompt)
         except Exception as e:
             print(f"Error fetching generation task: {e}")
             continue
