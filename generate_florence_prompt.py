@@ -110,6 +110,7 @@ def main():
             image_url = task.get("image_url")
             token = task.get("token")
             temperature = float(task.get("temperature"))
+            system_prompt = task.get("system_prompt")
         except Exception as e:
             print(f"Error fetching generation task: {e}")
             continue
