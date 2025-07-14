@@ -214,7 +214,7 @@ if __name__ == "__main__":
                     return data["image_url"], data["prompt"], data["guidance"], data["steps"], data["temperature"], data["shift"], data["system_prompt_id"]
         except Exception as e:
             print(f"API request failed: {e}")
-        return None, None, None, None, None, None
+        return None, None, None, None, None, None, None
 
     while True:
         task_image_url, task_prompt, p_guidance, p_steps, temperature, shift, system_prompt_id = fetch_task()
