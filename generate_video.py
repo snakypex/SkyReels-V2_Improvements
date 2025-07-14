@@ -138,7 +138,7 @@ if __name__ == "__main__":
 
     torch.backends.cuda.preferred_linalg_library("default")  # or try "magma" if available
 
-    def generate_once(img, p_text, p_guidance, p_steps, temperature, shift):
+    def generate_once(img, p_text, p_guidance, p_steps, temperature, shift, system_prompt_id):
         for idx in range(args.batch_size):
             if local_rank == 0:
                 print(f"Generating video {idx+1} of {args.batch_size}")
@@ -194,7 +194,7 @@ if __name__ == "__main__":
                 if args.use_usp and dist.get_world_size():
                     gpucount = "_" + str(dist.get_world_size()) + "xGPU"
                 video_out_file = (
-                    f"{current_time}_liroai_cfg{p_guidance}_steps{p_steps}_shift{shift}_temperature{temperature}_{p_text[:100].replace('/', '')}_{idx}.mp4"
+                    f"{current_time}_liroai_cfg{p_guidance}_steps{p_steps}_shift{shift}_temperature{temperature}_systemprompt{system_prompt_id}_{p_text[:100].replace('/', '')}_{idx}.mp4"
                 )
                 output_path = os.path.join(save_dir, video_out_file)
                 imageio.mimwrite(
@@ -211,13 +211,13 @@ if __name__ == "__main__":
             if resp.status_code == 200:
                 data = resp.json()
                 if isinstance(data, dict) and "image_url" in data and "prompt" in data and "guidance" in data and "steps" in data:
-                    return data["image_url"], data["prompt"], data["guidance"], data["steps"], data["temperature"], data["shift"]
+                    return data["image_url"], data["prompt"], data["guidance"], data["steps"], data["temperature"], data["shift"], data["system_prompt_id"]
         except Exception as e:
             print(f"API request failed: {e}")
-        return None, None, None, None, None
+        return None, None, None, None, None, None
 
     while True:
-        task_image_url, task_prompt, p_guidance, p_steps, temperature, shift = fetch_task()
+        task_image_url, task_prompt, p_guidance, p_steps, temperature, shift, system_prompt_id = fetch_task()
         if not task_image_url or not task_prompt:
             time.sleep(1)
             continue
@@ -259,4 +259,4 @@ if __name__ == "__main__":
             continue
 
         prompt_txt = enhance_prompt(task_prompt)
-        generate_once(img, prompt_txt, p_guidance, p_steps, temperature, shift)
+        generate_once(img, prompt_txt, p_guidance, p_steps, temperature, shift, system_prompt_id)
