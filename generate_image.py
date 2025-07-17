@@ -32,7 +32,7 @@ pipe.load_lora_weights(
 )
 
 # 이미지 생성
-prompt = "An 18-year-old realistic girl is naked with her legs spread. She spreads her pussy with her fingers."
+prompt = "Portrait stylisé d'une femme nu, rayonnante de bonheur, tenant des liasses de billets de banque. Elle est dans une chambre luxueuse aux couleurs chaudes, avec un éclairage doux et tamisé. Ambiance de luxe décontracté et d'opulence discrète."
 negative_prompt = "text, watermark, signature, cartoon, anime, illustration, painting, drawing, low quality, blurry"
 
 # 시드 설정
