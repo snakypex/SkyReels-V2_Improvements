@@ -32,7 +32,7 @@ pipe.load_lora_weights(
 )
 
 # 이미지 생성
-prompt = "Portrait stylisé d'une femme nu, rayonnante de bonheur, tenant des liasses de billets de banque. Elle est dans une chambre luxueuse aux couleurs chaudes, avec un éclairage doux et tamisé. Ambiance de luxe décontracté et d'opulence discrète."
+prompt = sys.argv[1]
 negative_prompt = "text, watermark, signature, cartoon, anime, illustration, painting, drawing, low quality, blurry"
 
 # 시드 설정
